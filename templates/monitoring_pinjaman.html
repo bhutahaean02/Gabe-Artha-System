@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitoring Pinjaman - Koperasi{% endblock %}
+{% block page_title %}Dashboard Monitoring & Jatuh Tempo{% endblock %}
+
+{% block content %}
+<style>
+    .table-monitoring th {
+        background-color: #1e2b3c;
+        color: white;
+        white-space: nowrap;
+        font-size: 11px;
+        text-transform: uppercase;
+        vertical-align: middle;
+        text-align: center;
+        border-right: 1px solid #2c3e50;
+    }
+    .table-monitoring td {
+        white-space: nowrap;
+        font-size: 13px;
+        vertical-align: middle;
+        border-right: 1px solid #dee2e6;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: #fff;
+        z-index: 1;
+        box-shadow: inset -2px 0 5px rgba(0,0,0,0.05);
+    }
+    .table-monitoring th.sticky-col {
+        background-color: #1e2b3c;
+        z-index: 2;
+    }
+    .table-wrapper {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .table-wrapper thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+    }
+    .table-wrapper thead th.sticky-col {
+        z-index: 4;
+    }
+</style>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-primary border-4 h-100">
+            <div class="card-body py-2">
+                <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Tagihan Aktif</div>
+                <div class="h4 mb-0 fw-bold text-gray-800" id="dashTotalTagihan">Rp 0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-danger border-4 h-100">
+            <div class="card-body py-2">
+                <div class="text-xs fw-bold text-danger text-uppercase mb-1">Total Tunggakan</div>
+                <div class="h4 mb-0 fw-bold text-gray-800" id="dashTotalTunggakan">Rp 0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-warning border-4 h-100">
+            <div class="card-body py-2">
+                <div class="text-xs fw-bold text-warning text-uppercase mb-1">Total Denda Overdue</div>
+                <div class="h4 mb-0 fw-bold text-gray-800" id="dashTotalDenda">Rp 0</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm border-start border-secondary border-4 h-100">
+            <div class="card-body py-2">
+                <div class="text-xs fw-bold text-secondary text-uppercase mb-1">Anggota Jatuh Tempo</div>
+                <div class="h4 mb-0 fw-bold text-gray-800" id="dashAnggotaOverdue">0 Orang</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-table me-2"></i> Data Monitoring Jatuh Tempo & Overdue</h6>
+        <button class="btn btn-sm btn-outline-success"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive table-wrapper">
+            <table class="table table-hover table-striped table-monitoring mb-0" id="tableMonitoring">
+                <thead>
+                    <tr>
+                        <th class="sticky-col">NO</th>
+                        <th class="sticky-col">NAMA ANGGOTA</th>
+                        <th>PT/INSTANSI</th>
+                        <th>TANGGAL GAJIAN (JATUH TEMPO)</th>
+                        <th class="bg-danger text-white">TANGGAL PEMBAYARAN</th>
+                        <th>STATUS PEKERJAAN</th>
+                        <th>TGL BERAKHIR KONTRAK</th>
+                        <th>SURAT KET. KERJA</th>
+                        <th>EMAIL JAMSOSTEK</th>
+                        <th>PASSWORD JAMSOSTEK</th>
+                        <th>NOMOR KPJ JMO</th>
+                        <th>NOMOR HP</th>
+                        <th>NIK KTP</th>
+                        <th>SALDO JAMSOSTEK</th>
+                        <th>PEMBAYARAN IURAN TERAKHIR</th>
+                        <th>STATUS JAMSOSTEK</th>
+                        <th>BUKTI RISET</th>
+                        <th>JENIS PINJAMAN</th>
+                        <th>TANGGAL CAIR</th>
+                        <th>BESAR PINJAMAN</th>
+                        <th>TENOR</th>
+                        <th>BUNGA</th>
+                        <th>ANGSURAN KE-</th>
+                        <th>SIMPANAN WAJIB</th>
+                        <th>EDC</th>
+                        <th>STATUS PEMBAYARAN</th>
+                        <th>ANGSURAN POKOK</th>
+                        <th>ANGSURAN MARGIN</th>
+                        <th>ANGSURAN DENDA</th>
+                        <th class="bg-primary text-white">TOTAL ANGSURAN</th>
+                        <th class="bg-info text-white">TOTAL TAGIHAN ANGSURAN</th>
+                        <th class="bg-warning text-dark">TUNGGAKAN ANGSURAN</th>
+                        <th class="bg-danger text-white">OVERDUE (HARI)</th>
+                        <th class="bg-danger text-white">TUNGGAKAN DENDA</th>
+                        <th class="bg-danger text-white">TOTAL TUNGGAKAN</th>
+                        <th>KOL</th>
+                        <th>MARKETING</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyMonitoring">
+                    <tr><td colspan="37" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data monitoring...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const formatRp = (angka) => (angka) ? 'Rp ' + Number(angka).toLocaleString('id-ID') : 'Rp 0';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/monitoring_pinjaman').then(res => res.json()).then(res => {
+            const tbody = document.getElementById('tbodyMonitoring');
+            tbody.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                let totalTagihan = 0, totalTunggakanAll = 0, totalDenda = 0, countOverdue = 0;
+
+                res.data.forEach((row, i) => {
+                    let tagihanPokok = Number(row.tagihan_pokok) || 0;
+                    let tagihanMargin = Number(row.tagihan_margin) || 0;
+                    let tunggakanDenda = Number(row.tunggakan_denda) || 0;
+                    let odHari = Number(row.od_hari) || 0;
+
+                    let isLunas = row.status_pembayaran === 'LUNAS';
+                    let angsuranPokok = isLunas ? Number(row.angsuran_pokok) : tagihanPokok;
+                    let angsuranMargin = isLunas ? Number(row.angsuran_margin) : tagihanMargin;
+                    let angsuranDenda = isLunas ? Number(row.angsuran_denda) : tunggakanDenda;
+                    let totalAngsuran = angsuranPokok + angsuranMargin + angsuranDenda;
+                    
+                    let tunggakanAngsuran = odHari > 0 ? (tagihanPokok + tagihanMargin) : 0;
+                    let totalTunggakan = tunggakanAngsuran + tunggakanDenda;
+
+                    if (!isLunas && row.status_pembayaran) {
+                        totalTagihan += (tagihanPokok + tagihanMargin);
+                        totalTunggakanAll += totalTunggakan;
+                        totalDenda += tunggakanDenda;
+                        if(odHari > 0) countOverdue++;
+                    }
+
+                    let overdueClass = odHari > 0 ? 'text-danger fw-bold bg-danger bg-opacity-10' : '';
+                    
+                    // Pembuatan Dropdown Status JMO Otomatis
+                    const jmoOptions = ["AKTIF", "NON-AKTIF", "RISET", "SUDAH CAIR", "LINK", "LUNAS", "TIDAK ADA JMO"];
+                    let jmoSelect = `<select class="form-select form-select-sm border-secondary jmo-dropdown" data-no="${row.no_anggota}" style="font-size:11px; width:120px; font-weight:bold; cursor:pointer;">
+                        <option value="">- Pilih -</option>
+                        ${jmoOptions.map(opt => `<option value="${opt}" ${row.status_jmo === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>`;
+
+                    tbody.innerHTML += `<tr>
+                        <td class="sticky-col text-center">${i + 1}</td>
+                        <td class="sticky-col fw-bold">${row.nama_anggota || '-'}</td>
+                        <td>${row.pt_instansi || '-'}</td><td class="text-center fw-bold">${row.jatuh_tempo || '-'}</td><td class="text-center fw-bold text-danger">${row.tgl_bayar || '-'}</td>
+                        <td>${row.status_karyawan || '-'}</td><td class="text-center">${row.akhir_bekerja || '-'}</td><td class="text-center">-</td>
+                        <td>${row.email || '-'}</td><td>${row.password || '-'}</td><td>${row.no_jmo || '-'}</td>
+                        <td>${row.no_telp || '-'}</td><td>${row.nik_ktp || '-'}</td><td class="text-center">-</td><td class="text-center">-</td>
+                        <td>${jmoSelect}</td><td class="text-center">-</td><td>${row.jenis_pinjaman || '-'}</td><td class="text-center">${row.tgl_pencairan || '-'}</td>
+                        <td class="text-end">${formatRp(row.besar_pinjaman)}</td><td class="text-center">${row.tenor || '-'}</td><td class="text-center">${row.bunga_persen ? row.bunga_persen+'%' : '-'}</td><td class="text-center fw-bold">${row.angsuran_ke || '-'}</td>
+                        <td class="text-end">${formatRp(row.simpanan_wajib)}</td><td class="text-center fw-bold text-primary">${row.edc || '-'}</td><td class="text-center"><span class="badge ${row.status_pembayaran === 'LUNAS' ? 'bg-success' : (row.status_pembayaran ? 'bg-warning text-dark' : 'bg-secondary')}">${row.status_pembayaran || 'TIDAK ADA PINJAMAN'}</span></td>
+                        <td class="text-end">${formatRp(angsuranPokok)}</td><td class="text-end">${formatRp(angsuranMargin)}</td><td class="text-end">${formatRp(angsuranDenda)}</td>
+                        <td class="text-end fw-bold text-primary">${formatRp(totalAngsuran)}</td><td class="text-end fw-bold text-info">${formatRp(totalAngsuran)}</td>
+                        <td class="text-end ${overdueClass}">${formatRp(tunggakanAngsuran)}</td><td class="text-center ${overdueClass}">${odHari}</td><td class="text-end ${overdueClass}">${formatRp(tunggakanDenda)}</td>
+                        <td class="text-end fw-bold text-danger ${overdueClass}">${formatRp(totalTunggakan)}</td>
+                        <td class="text-center fw-bold">${row.kol || '-'}</td><td class="text-center">-</td>
+                    </tr>`;
+                });
+
+                document.getElementById('dashTotalTagihan').innerText = formatRp(totalTagihan);
+                document.getElementById('dashTotalTunggakan').innerText = formatRp(totalTunggakanAll);
+                document.getElementById('dashTotalDenda').innerText = formatRp(totalDenda);
+                document.getElementById('dashAnggotaOverdue').innerText = countOverdue + ' Orang';
+                
+                // Pasang Event Listener ke Dropdown JMO
+                document.querySelectorAll('.jmo-dropdown').forEach(selectEl => {
+                    selectEl.addEventListener('change', function() {
+                        const no_anggota = this.getAttribute('data-no');
+                        const new_status = this.value;
+                        this.classList.add('bg-warning'); // Efek Loading kuning
+                        
+                        fetch('/api/update_jmo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ no_anggota: no_anggota, status_jmo: new_status })
+                        })
+                        .then(res => res.json())
+                        .then(res => {
+                            this.classList.remove('bg-warning');
+                            if(res.status === 'success') {
+                                this.classList.add('bg-success', 'text-white'); // Efek sukses hijau
+                                setTimeout(() => this.classList.remove('bg-success', 'text-white'), 1500);
+                            } else {
+                                alert('Gagal memperbarui status: ' + res.message);
+                            }
+                        })
+                        .catch(err => {
+                            this.classList.remove('bg-warning');
+                            console.error(err);
+                        });
+                    });
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="37" class="text-center text-muted py-4">Semua tagihan berjalan dalam keadaan lunas / tidak ada data.</td></tr>';
+            }
+        }).catch(err => console.error(err));
+    });
+</script>
+{% endblock %}

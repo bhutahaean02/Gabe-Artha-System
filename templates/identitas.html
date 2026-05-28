@@ -1,0 +1,1067 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Identitas - Koperasi{% endblock %}
+{% block page_title %}Manajemen Data Anggota{% endblock %}
+
+{% block content %}
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-0 border-bottom-0 d-flex justify-content-between align-items-center flex-wrap">
+        <!-- Sistem Navigasi Tab -->
+        <ul class="nav nav-tabs" id="identitasTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="tabel-tab" data-bs-toggle="tab" data-bs-target="#tabel-pane" type="button" role="tab"><i class="fa-solid fa-list me-1"></i> Daftar Anggota</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-success" id="form-tab" data-bs-toggle="tab" data-bs-target="#form-pane" type="button" role="tab"><i class="fa-solid fa-plus me-1"></i> Tambah Anggota</button>
+            </li>
+        </ul>
+        <div class="form-check form-switch ms-auto mt-2 mt-md-0" title="Matikan denda saat input migrasi data lama">
+            <input class="form-check-input" type="checkbox" role="switch" id="switchDendaAktif" style="cursor: pointer;" checked>
+            <label class="form-check-label fw-bold text-danger small" for="switchDendaAktif">Hitung Denda Otomatis</label>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="tab-content" id="identitasTabContent">
+            
+            <!-- TAB 1: DAFTAR DATA (READ) -->
+            <div class="tab-pane fade show active" id="tabel-pane" role="tabpanel" tabindex="0">
+                <div id="alertBoxMain" class="mt-3"></div>
+                
+                <!-- Fitur Pencarian -->
+                <div class="row mt-3 mb-2">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fa-solid fa-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Cari Nama Anggota atau Marketing...">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive mt-2">
+                    <table class="table table-hover table-striped align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>No Anggota</th>
+                                <th>Nama Anggota</th>
+                                <th>PT / Instansi</th>
+                                <th>No Telp</th>
+                                <th>Marketing</th>
+                                <th>KOL</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: FORM INPUT (CREATE) -->
+            <div class="tab-pane fade" id="form-pane" role="tabpanel" tabindex="0">
+                <form id="formIdentitas" class="mt-2">
+                    <!-- Alert Notifikasi -->
+                    <div id="alertBox"></div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Pribadi</h6>
+                    <div class="row g-3 mb-4">
+                        
+                        <!-- BAGIAN INI YANG DIUBAH UNTUK AUTO-GENERATE -->
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-primary">No Anggota (Sesuai Cabang) *</label>
+                            <div class="input-group input-group-sm">
+                                <!-- Hapus atribut disabled agar data bisa dikirim, sisakan readonly -->
+                                <input type="text" id="inputNoAnggota" name="no_anggota" class="form-control bg-light text-primary fw-bold" placeholder="Klik Generate" readonly required>
+                                <button class="btn btn-outline-primary" type="button" id="btnGenerateNo" title="Buat Nomor Anggota Baru">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Nama Anggota *</label>
+                            <input type="text" name="nama_anggota" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Tanggal Lahir</label>
+                            <input type="date" name="tgl_lahir" class="form-control form-control-sm">
+                        </div>
+                        <!-- ============================================== -->
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">No Telepon</label>
+                            <input type="text" name="no_telp" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">NIK KTP</label>
+                            <input type="text" name="nik_ktp" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">NIK KK</label>
+                            <input type="text" name="nik_kk" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Alamat KTP</label>
+                            <textarea name="alamat_ktp" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Alamat Tagih</label>
+                            <textarea name="alamat_tagih" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Status Tempat Tinggal</label>
+                            <input type="text" name="status_tempat_tinggal" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Password Akun</label>
+                            <input type="password" name="password" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Pekerjaan</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">PT / Instansi</label>
+                            <input type="text" name="pt_instansi" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Status Karyawan</label>
+                            <input type="text" name="status_karyawan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Jabatan</label>
+                            <input type="text" name="jabatan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Awal Bekerja</label>
+                            <input type="date" name="awal_bekerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Lama Kerja</label>
+                            <input type="text" name="lama_kerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Akhir Bekerja</label>
+                            <input type="date" name="akhir_bekerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">No JMO</label>
+                            <input type="text" name="no_jmo" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Status JMO</label>
+                            <input type="text" name="status_jmo" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Bank & Penanggung Jawab</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">No Rekening Anggota</label>
+                            <input type="text" name="no_rek" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Bank Anggota</label>
+                            <input type="text" name="bank" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Nama Penanggung Jawab</label>
+                            <input type="text" name="nama_penanggung_jawab" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">No Telp Penanggung Jawab</label>
+                            <input type="text" name="no_telp_penanggung_jawab" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Bank Penanggung Jawab</label>
+                            <input type="text" name="bank_penanggung_jawab" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">No Rek Penanggung Jawab</label>
+                            <input type="text" name="no_rek_penanggung_jawab" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">KOL</label>
+                            <input type="text" name="kol" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Kriteria</label>
+                            <input type="text" name="kriteria" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Marketing (PIC Koperasi)</label>
+                            <input type="text" name="marketing" class="form-control form-control-sm" placeholder="Nama Marketing...">
+                        </div>
+                    </div>
+                    
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-4">Lampiran Berkas (Opsional)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Upload Berkas Anggota (PDF, Max 5MB)</label>
+                            <input type="file" name="berkas_pdf" id="berkasPdf" accept="application/pdf" class="form-control form-control-sm border-primary">
+                            <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Satukan semua dokumen (KTP, KK, ID Card, dll) ke dalam 1 file PDF.</small>
+                        </div>
+                    </div>
+
+                    <div class="text-end border-top pt-3 mt-4">
+                        <button type="reset" class="btn btn-secondary">Reset</button>
+                        <button type="submit" id="btnSubmit" class="btn btn-success px-4"><i class="fa-solid fa-save me-1"></i> Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Anggota -->
+<div class="modal fade" id="modalDetailAnggota" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-address-card me-2"></i>Detail Anggota: <span id="detailNamaAnggota">Memuat...</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <!-- Tab Navigasi Modal -->
+                <ul class="nav nav-pills mb-3 border-bottom pb-2" id="detailTabs">
+                    <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#tab-identitas" type="button">Identitas Diri</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-simpanan" type="button">Buku Simpanan</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-multiguna" type="button">Multiguna</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-tempo" type="button">Tempo</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-urgent-gaji" type="button">Dana Urgent Gaji</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-urgent-thr" type="button">Dana Urgent THR</button></li>
+                    <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-histori" type="button">Histori Transaksi</button></li>
+                </ul>
+                
+                <div class="tab-content bg-white p-3 border rounded shadow-sm">
+                    <!-- 1. Identitas -->
+                    <div class="tab-pane fade show active" id="tab-identitas">
+                        <table class="table table-sm table-bordered m-0 align-middle">
+                            <tbody id="tbodyDetailIdentitas"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 2. Simpanan -->
+                    <div class="tab-pane fade" id="tab-simpanan">
+                        <div class="row text-center g-3">
+                            <div class="col-md-4">
+                                <div class="card border-primary border-2">
+                                    <div class="card-header bg-primary text-white fw-bold">Simpanan Pokok</div>
+                                    <div class="card-body"><h4 class="mb-0 text-primary" id="detSimpananPokok">Rp 0</h4></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-success border-2">
+                                    <div class="card-header bg-success text-white fw-bold">Simpanan Wajib</div>
+                                    <div class="card-body"><h4 class="mb-0 text-success" id="detSimpananWajib">Rp 0</h4></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-info border-2">
+                                    <div class="card-header bg-info text-white fw-bold">Total Simpanan</div>
+                                    <div class="card-body"><h4 class="mb-0 text-info" id="detTotalSimpanan">Rp 0</h4></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Pinjaman Multiguna -->
+                    <div class="tab-pane fade" id="tab-multiguna">
+                        <div id="containerMultiguna"></div>
+                    </div>
+
+                    <!-- 4. Pinjaman Tempo -->
+                    <div class="tab-pane fade" id="tab-tempo">
+                        <div id="containerTempo"></div>
+                    </div>
+
+                    <!-- 5. Pinjaman Urgent Gaji -->
+                    <div class="tab-pane fade" id="tab-urgent-gaji">
+                        <div id="containerUrgentGaji"></div>
+                    </div>
+
+                    <!-- 6. Pinjaman Urgent THR -->
+                    <div class="tab-pane fade" id="tab-urgent-thr">
+                        <div id="containerUrgentTHR"></div>
+                    </div>
+
+                    <!-- 5. Histori Transaksi -->
+                    <div class="tab-pane fade" id="tab-histori">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle"><thead class="table-dark">
+                                <tr><th>Tanggal</th><th>Akun Terlibat</th><th>Keterangan</th><th class="text-end">Debit</th><th class="text-end">Kredit</th></tr>
+                            </thead><tbody id="tbodyDetailHistori"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Anggota -->
+<div class="modal fade" id="modalEditAnggota" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <form id="formEditIdentitas" class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>Edit Data Anggota</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+                <div class="modal-body bg-light">
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Pribadi</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold">No Anggota</label>
+                            <input type="text" name="no_anggota" class="form-control bg-light fw-bold text-secondary" readonly required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Nama Anggota *</label>
+                            <input type="text" name="nama_anggota" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Tanggal Lahir</label>
+                            <input type="date" name="tgl_lahir" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">No Telepon</label>
+                            <input type="text" name="no_telp" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">NIK KTP</label>
+                            <input type="text" name="nik_ktp" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">NIK KK</label>
+                            <input type="text" name="nik_kk" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Alamat KTP</label>
+                            <textarea name="alamat_ktp" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Alamat Tagih</label>
+                            <textarea name="alamat_tagih" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Status Tempat Tinggal</label>
+                            <input type="text" name="status_tempat_tinggal" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Password Baru (Opsional)</label>
+                            <input type="password" name="password" class="form-control form-control-sm" placeholder="Isi untuk mengubah password...">
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Pekerjaan</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">PT / Instansi</label>
+                            <input type="text" name="pt_instansi" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Status Karyawan</label>
+                            <input type="text" name="status_karyawan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Jabatan</label>
+                            <input type="text" name="jabatan" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Awal Bekerja</label>
+                            <input type="date" name="awal_bekerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Lama Kerja</label>
+                            <input type="text" name="lama_kerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Akhir Bekerja</label>
+                            <input type="date" name="akhir_bekerja" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">No JMO</label>
+                            <input type="text" name="no_jmo" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Status JMO</label>
+                            <input type="text" name="status_jmo" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Bank & Penanggung Jawab</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6"><label class="form-label small fw-bold">No Rekening Anggota</label><input type="text" name="no_rek" class="form-control form-control-sm"></div>
+                        <div class="col-md-6"><label class="form-label small fw-bold">Bank Anggota</label><input type="text" name="bank" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">Nama Penanggung Jawab</label><input type="text" name="nama_penanggung_jawab" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">No Telp Penanggung Jawab</label><input type="text" name="no_telp_penanggung_jawab" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">Bank Penanggung Jawab</label><input type="text" name="bank_penanggung_jawab" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">No Rek Penanggung Jawab</label><input type="text" name="no_rek_penanggung_jawab" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">KOL</label><input type="text" name="kol" class="form-control form-control-sm"></div>
+                        <div class="col-md-4"><label class="form-label small fw-bold">Kriteria</label><input type="text" name="kriteria" class="form-control form-control-sm"></div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Marketing (PIC Koperasi)</label>
+                            <input type="text" name="marketing" class="form-control form-control-sm" placeholder="Nama Marketing...">
+                        </div>
+                    </div>
+                    <div class="row g-3"><div class="col-md-12"><label class="form-label small fw-bold">Ganti Berkas PDF (Opsional)</label><input type="file" name="berkas_pdf" id="editBerkasPdf" accept="application/pdf" class="form-control form-control-sm border-warning"><small class="text-muted">Kosongkan jika tidak ingin mengubah berkas yang sudah ada.</small></div></div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" id="btnSubmitEdit" class="btn btn-warning fw-bold text-dark"><i class="fa-solid fa-save me-1"></i> Update Data</button>
+                </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // FUNGSI TOGGLE DENDA (MODE MIGRASI)
+    document.addEventListener('DOMContentLoaded', () => {
+        const switchDenda = document.getElementById('switchDendaAktif');
+        if(!switchDenda) return;
+        
+        fetch('/api/pengaturan/denda')
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                switchDenda.checked = data.denda_aktif;
+            }
+        });
+
+        switchDenda.addEventListener('change', function() {
+            const isChecked = this.checked;
+            fetch('/api/pengaturan/denda', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({denda_aktif: isChecked})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') alert(data.message);
+            })
+            .catch(err => {
+                alert('Gagal mengubah pengaturan denda');
+                switchDenda.checked = !isChecked;
+            });
+        });
+    });
+
+    // Fungsi Global Format Rupiah
+    function formatRp(angka) {
+        return (angka) ? 'Rp ' + Number(angka).toLocaleString('id-ID') : 'Rp 0';
+    }
+
+    // FUNGSI BARU: Tombol Generate Nomor Anggota
+    document.getElementById('btnGenerateNo').addEventListener('click', function() {
+        const btn = this;
+        const inputNo = document.getElementById('inputNoAnggota');
+        
+        // Ubah tombol jadi loading
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        // Panggil API Backend
+        fetch(`/api/generate_no_anggota`)
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                inputNo.value = data.no_anggota;
+                
+                // Beri efek highlight warna sebentar biar menarik
+                inputNo.classList.remove('bg-light', 'text-primary');
+                inputNo.classList.add('bg-success', 'text-white');
+                setTimeout(() => {
+                    inputNo.classList.remove('bg-success', 'text-white');
+                    inputNo.classList.add('bg-light', 'text-primary');
+                }, 800);
+            } else {
+                alert('Gagal generate: ' + data.message);
+            }
+        })
+        .catch(err => console.error(err))
+        .finally(() => {
+            // Kembalikan tombol ke semula
+            btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate';
+            btn.disabled = false;
+        });
+    });
+
+    // Fungsi untuk Load Data ke Tabel
+    function loadData() {
+        fetch('/api/identitas')
+        .then(response => response.json())
+        .then(res => {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = ''; 
+            
+            if(res.data && res.data.length > 0) {
+                res.data.forEach(row => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><span class="badge bg-primary">${row.no_anggota}</span></td>
+                            <td class="fw-bold">${row.nama_anggota}</td>
+                            <td>${row.pt_instansi || '-'}</td>
+                            <td>${row.no_telp || '-'}</td>
+                            <td>${row.marketing || '-'}</td>
+                            <td>${row.kol || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info text-white" onclick="lihatDetail('${row.no_anggota}')" title="Lihat Detail Anggota"><i class="fa-solid fa-eye"></i></button>
+                                <button class="btn btn-sm btn-warning text-white" onclick="bukaModalEdit('${row.no_anggota}')" title="Edit Anggota"><i class="fa-solid fa-pen"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Belum ada data anggota.</td></tr>';
+            }
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    // Panggil saat halaman pertama kali dimuat
+    document.addEventListener('DOMContentLoaded', loadData);
+    
+    // Fitur Live Search
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#tableBody tr');
+        
+        rows.forEach(row => {
+            let text = row.innerText.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
+    });
+
+    function generateMutasiPinjamanHTML(tagihanRows, identitas, jenis) {
+        if(!tagihanRows || tagihanRows.length === 0) return '';
+        let firstRow = tagihanRows[0];
+        let nama = identitas.nama_anggota || '-';
+        let no_rek = identitas.no_rek || '-';
+        let besar_pinjaman = Number(firstRow.besar_pinjaman) || 0;
+        let tenor = firstRow.tenor || 0;
+        let bunga_persen = firstRow.bunga_persen || 0;
+        let tgl_cair = firstRow.tgl_pencairan || '-';
+        let tgl_jatemp_awal = firstRow.jatuh_tempo || '-';
+        
+        let btnAkad = `<a href="/api/cetak_akad/${firstRow.no_anggota}/${tgl_cair}" target="_blank" class="btn btn-sm btn-primary"><i class="fa-solid fa-file-contract me-1"></i> Cetak Akad</a>`;
+        let btnPernyataan = `<a href="/api/cetak_pernyataan/${firstRow.no_anggota}/${tgl_cair}" target="_blank" class="btn btn-sm btn-info text-white"><i class="fa-solid fa-file-signature me-1"></i> Surat Pernyataan</a>`;
+
+        let totTagPokok = 0, totTagMargin = 0, totTagDenda = 0;
+        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0;
+        let currentBakiDebet = besar_pinjaman;
+        
+        const rpStr = (val) => Number(val).toLocaleString('id-ID');
+
+        let tableRows = `<tr>
+            <td>1</td>
+            <td>${tgl_cair}</td>
+            <td class="text-start">PENCAIRAN ANGGOTA BARU AN. ${nama}</td>
+            <td class="text-end">${rpStr(besar_pinjaman)}</td>
+            <td>${bunga_persen}</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+        </tr>`;
+
+        tagihanRows.forEach((row, index) => {
+            let tagPokok = Number(row.tagihan_pokok) || 0;
+            let tagMargin = Number(row.tagihan_margin) || 0;
+            let tgkDenda = Number(row.tunggakan_denda) || 0;
+            
+            let angPokok = Number(row.angsuran_pokok) || 0;
+            let angMargin = Number(row.angsuran_margin) || 0;
+            let angDenda = Number(row.angsuran_denda) || 0;
+            
+            totTagPokok += tagPokok;
+            totTagMargin += tagMargin;
+            totTagDenda += tgkDenda; 
+            
+            totAngPokok += angPokok;
+            totAngMargin += angMargin;
+            totAngDenda += angDenda;
+            
+            currentBakiDebet -= angPokok;
+            
+            let btnStruk = row.status === 'LUNAS' ? `<a href="/api/cetak_struk/utama/${row.id}/pdf" target="_blank" class="badge bg-danger ms-1 text-decoration-none" title="Cetak Struk">Cetak</a>` : '';
+            let btnEditTgl = row.status === 'BELUM BAYAR' ? `<button onclick="editJatuhTempo('utama', ${row.id}, '${row.jatuh_tempo}', '${row.no_anggota}')" class="btn btn-sm btn-outline-secondary ms-1 py-0 px-1" style="font-size:0.7rem;" title="Ubah Jatuh Tempo"><i class="fa-solid fa-pencil"></i></button>` : '';
+            let sisaPokokRow = row.status === 'LUNAS' ? 0 : (tagPokok - angPokok);
+            let sisaMarginRow = row.status === 'LUNAS' ? 0 : (tagMargin - angMargin);
+            let sisaDendaRow = row.status === 'LUNAS' ? 0 : Math.max(0, tgkDenda - angDenda);
+
+            tableRows += `<tr>
+                <td>${index + 2}</td>
+                <td>${row.jatuh_tempo} ${btnEditTgl}</td>
+                <td class="text-start">Tagihan ke-${row.angsuran_ke} ${btnStruk}</td>
+                <td class="text-end">0</td>
+                <td>0</td>
+                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
+                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td>
+                <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
+                <td class="text-end text-danger">${rpStr(sisaPokokRow)}</td><td class="text-end text-danger">${rpStr(sisaMarginRow)}</td><td class="text-end text-danger">${rpStr(sisaDendaRow)}</td>
+            </tr>`;
+        });
+        
+        let totSisaPokok = totTagPokok - totAngPokok;
+        let totSisaMargin = totTagMargin - totAngMargin;
+        let totSisaDenda = totTagDenda - totAngDenda;
+        let totSisaHutang = totSisaPokok + totSisaMargin + totSisaDenda;
+        
+        return `
+        <div class="border rounded p-3 mb-4 bg-white shadow-sm" style="font-size: 0.85rem;">
+            <h6 class="fw-bold text-center mb-3">LAPORAN MUTASI PINJAMAN ${jenis.toUpperCase()}</h6>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="40%" class="text-muted">No Rekening</td><td class="fw-bold">: ${no_rek}</td></tr>
+                        <tr><td class="text-muted">Nama Anggota</td><td class="fw-bold">: ${nama}</td></tr>
+                        <tr><td class="text-muted">Jumlah Pinjaman</td><td class="fw-bold">: ${formatRp(besar_pinjaman)}</td></tr>
+                        <tr><td class="text-muted">Tipe Usaha</td><td class="fw-bold">: PUSAT</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="40%" class="text-muted">Tgl Realisasi</td><td class="fw-bold">: ${tgl_cair}</td></tr>
+                        <tr><td class="text-muted">Jangka Waktu</td><td class="fw-bold">: ${tenor} Bulan</td></tr>
+                        <tr><td class="text-muted">Tgl. Jatemp</td><td class="fw-bold">: ${tgl_jatemp_awal}</td></tr>
+                        <tr><td class="text-muted">ID Karyawan</td><td class="fw-bold">: ${identitas.nik_ktp || '-'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="45%" class="text-muted">Margin Perbulan</td><td class="fw-bold">: ${bunga_persen}%</td></tr>
+                        <tr><td class="text-muted">Marketing</td><td class="fw-bold">: -</td></tr>
+                        <tr><td class="text-muted">Model Angsuran</td><td class="fw-bold">: Flat/bulan</td></tr>
+                        <tr><td class="text-muted">Tgl Permintaan</td><td class="fw-bold">: ${tgl_cair}</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle text-center" style="white-space: nowrap;">
+                    <thead class="table-light align-middle">
+                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="3">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
+                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>
+            
+            <div class="row fw-bold bg-light p-2 mt-2 border rounded mx-0">
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Pokok</span><span>: ${formatRp(totTagPokok)}</span></div>
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Margin</span><span>: ${formatRp(totTagMargin)}</span></div>
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Denda</span><span>: ${formatRp(totTagDenda)}</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Pokok</span><span>: ${formatRp(totAngPokok)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Margin</span><span>: ${formatRp(totAngMargin)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Denda</span><span>: ${formatRp(totAngDenda)}</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Pokok</span><span>: ${formatRp(totSisaPokok)}</span></div>
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Margin</span><span>: ${formatRp(totSisaMargin)}</span></div>
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Denda</span><span>: ${formatRp(totSisaDenda)}</span></div>
+                    <hr class="my-1">
+                    <div class="d-flex justify-content-between text-danger fs-6"><span>Total Sisa Hutang</span><span>: ${formatRp(totSisaHutang)}</span></div>
+                </div>
+            </div>
+            <div class="mt-3 text-end">${btnAkad} ${btnPernyataan}</div>
+        </div>`;
+    }
+
+    function generateMutasiUrgentHTML(tagihanRows, identitas, jenis) {
+        if(!tagihanRows || tagihanRows.length === 0) return '';
+        let firstRow = tagihanRows[0];
+        let nama = identitas.nama_anggota || '-';
+        let no_rek = identitas.no_rek || '-';
+        let besar_pinjaman = Number(firstRow.tagihan_pokok) || 0;
+        let margin_nominal = Number(firstRow.tagihan_margin) || Number(firstRow.margin) || 0;
+        let tgl_cair = firstRow.tgl_pencairan || '-';
+        let tgl_jatemp = firstRow.tanggal_jatuh_tempo || '-';
+        
+        let totTagPokok = 0, totTagMargin = 0, totTagDenda = 0;
+        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0;
+        let currentBakiDebet = besar_pinjaman;
+        
+        const rpStr = (val) => Number(val).toLocaleString('id-ID');
+
+        let tableRows = `<tr>
+            <td>1</td>
+            <td>${tgl_cair}</td>
+            <td class="text-start">PENCAIRAN DANA URGENT AN. ${nama}</td>
+            <td class="text-end">${rpStr(besar_pinjaman)}</td>
+            <td>-</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+        </tr>`;
+
+        tagihanRows.forEach((row, index) => {
+            let tagPokok = Number(row.tagihan_pokok) || 0;
+            let tagMargin = Number(row.tagihan_margin) || 0;
+            let tgkDenda = Number(row.tunggakan_denda) || 0;
+            
+            let angPokok = Number(row.angsuran_pokok) || 0;
+            let angMargin = Number(row.angsuran_margin) || 0;
+            let angDenda = Number(row.angsuran_denda) || 0;
+            
+            totTagPokok += tagPokok;
+            totTagMargin += tagMargin;
+            totTagDenda += tgkDenda; 
+            
+            totAngPokok += angPokok;
+            totAngMargin += angMargin;
+            totAngDenda += angDenda;
+            
+            currentBakiDebet -= angPokok;
+            
+            let btnStruk = row.status === 'LUNAS' ? `<a href="/api/cetak_struk/urgent/${row.id}/pdf" target="_blank" class="badge bg-danger ms-1 text-decoration-none" title="Cetak Struk">Cetak Bukti</a>` : '';
+            let btnEditTgl = row.status === 'BELUM BAYAR' ? `<button onclick="editJatuhTempo('urgent', ${row.id}, '${row.tanggal_jatuh_tempo || ''}', '${row.no_anggota}')" class="btn btn-sm btn-outline-secondary ms-1 py-0 px-1" style="font-size:0.7rem;" title="Ubah Jatuh Tempo"><i class="fa-solid fa-pencil"></i></button>` : '';
+            let sisaPokokRow = row.status === 'LUNAS' ? 0 : (tagPokok - angPokok);
+            let sisaMarginRow = row.status === 'LUNAS' ? 0 : (tagMargin - angMargin);
+            let sisaDendaRow = row.status === 'LUNAS' ? 0 : Math.max(0, tgkDenda - angDenda);
+
+            tableRows += `<tr>
+                <td>${index + 2}</td>
+                <td>${row.tanggal_jatuh_tempo || '-'} ${btnEditTgl}</td>
+                <td class="text-start">Pelunasan Jatuh Tempo ${btnStruk}</td>
+                <td class="text-end">0</td>
+                <td>-</td>
+                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
+                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td>
+                <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
+                <td class="text-end text-danger">${rpStr(sisaPokokRow)}</td><td class="text-end text-danger">${rpStr(sisaMarginRow)}</td><td class="text-end text-danger">${rpStr(sisaDendaRow)}</td>
+            </tr>`;
+        });
+        
+        let totSisaPokok = totTagPokok - totAngPokok;
+        let totSisaMargin = totTagMargin - totAngMargin;
+        let totSisaDenda = totTagDenda - totAngDenda;
+        let totSisaHutang = totSisaPokok + totSisaMargin + totSisaDenda;
+        
+        return `
+        <div class="border border-warning rounded p-3 mb-4 bg-white shadow-sm" style="font-size: 0.85rem;">
+            <h6 class="fw-bold text-center text-warning mb-3"><i class="fa-solid fa-bolt me-1"></i> LAPORAN MUTASI DANA URGENT ${jenis.toUpperCase()}</h6>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="40%" class="text-muted">No Rekening</td><td class="fw-bold">: ${no_rek}</td></tr>
+                        <tr><td class="text-muted">Nama Anggota</td><td class="fw-bold">: ${nama}</td></tr>
+                        <tr><td class="text-muted">Jumlah Pinjaman</td><td class="fw-bold">: ${formatRp(besar_pinjaman)}</td></tr>
+                        <tr><td class="text-muted">Tipe Usaha</td><td class="fw-bold">: PUSAT</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="40%" class="text-muted">Tgl Realisasi</td><td class="fw-bold">: ${tgl_cair}</td></tr>
+                        <tr><td class="text-muted">Jangka Waktu</td><td class="fw-bold text-danger">: Sekali Bayar</td></tr>
+                        <tr><td class="text-muted">Tgl. Jatemp</td><td class="fw-bold">: ${tgl_jatemp}</td></tr>
+                        <tr><td class="text-muted">ID Karyawan</td><td class="fw-bold">: ${identitas.nik_ktp || '-'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <table class="table table-sm table-borderless m-0">
+                        <tr><td width="45%" class="text-muted">Margin Nominal</td><td class="fw-bold">: ${formatRp(margin_nominal)}</td></tr>
+                        <tr><td class="text-muted">Marketing</td><td class="fw-bold">: -</td></tr>
+                        <tr><td class="text-muted">Model Angsuran</td><td class="fw-bold">: Lunas Tepat Waktu</td></tr>
+                        <tr><td class="text-muted">Tgl Permintaan</td><td class="fw-bold">: ${tgl_cair}</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle text-center" style="white-space: nowrap;">
+                    <thead class="table-light align-middle">
+                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="3">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
+                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>
+            
+            <div class="row fw-bold bg-light p-2 mt-2 border rounded mx-0">
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Pokok</span><span>: ${formatRp(totTagPokok)}</span></div>
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Margin</span><span>: ${formatRp(totTagMargin)}</span></div>
+                    <div class="d-flex justify-content-between"><span>Total Tagihan Denda</span><span>: ${formatRp(totTagDenda)}</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Pokok</span><span>: ${formatRp(totAngPokok)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Margin</span><span>: ${formatRp(totAngMargin)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran Denda</span><span>: ${formatRp(totAngDenda)}</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Pokok</span><span>: ${formatRp(totSisaPokok)}</span></div>
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Margin</span><span>: ${formatRp(totSisaMargin)}</span></div>
+                    <div class="d-flex justify-content-between text-danger"><span>Total Sisa Denda</span><span>: ${formatRp(totSisaDenda)}</span></div>
+                    <hr class="my-1">
+                    <div class="d-flex justify-content-between text-danger fs-6"><span>Total Sisa Hutang</span><span>: ${formatRp(totSisaHutang)}</span></div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // FUNGSI LIHAT DETAIL ANGGOTA
+    function lihatDetail(no_anggota) {
+        const modalEl = document.getElementById('modalDetailAnggota');
+        const myModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        myModal.show();
+        document.getElementById('detailNamaAnggota').innerText = 'Memuat Data...';
+        
+        fetch(`/api/anggota/${no_anggota}/detail`).then(res => res.json()).then(res => {
+            if(res.status === 'success') {
+                const d = res.data;
+                document.getElementById('detailNamaAnggota').innerText = `${d.identitas.nama_anggota} (${no_anggota})`;
+                
+                // 1. Render Identitas (2 Kolom)
+                let tbodyId = document.getElementById('tbodyDetailIdentitas'); tbodyId.innerHTML = '';
+                const keys = Object.keys(d.identitas);
+                for(let i=0; i < keys.length; i+=2) {
+                    let k1 = keys[i], v1 = d.identitas[k1] || '-';
+                    let k2 = i+1 < keys.length ? keys[i+1] : '', v2 = k2 ? (d.identitas[k2] || '-') : '';
+                    tbodyId.innerHTML += `<tr>
+                        <td class="bg-light fw-bold text-uppercase" width="20%">${k1.replace(/_/g, ' ')}</td><td width="30%">${v1}</td>
+                        ${k2 ? `<td class="bg-light fw-bold text-uppercase" width="20%">${k2.replace(/_/g, ' ')}</td><td width="30%">${v2}</td>` : '<td colspan="2"></td>'}
+                    </tr>`;
+                }
+                
+                // Tambahkan Link Berkas PDF jika ada
+                if (d.identitas.berkas_pdf && d.identitas.berkas_pdf !== 'null') {
+                    tbodyId.innerHTML += `<tr><td class="bg-light fw-bold text-uppercase">LAMPIRAN BERKAS</td><td colspan="3">
+                        <a href="/api/download_berkas/${no_anggota}" target="_blank" class="btn btn-sm btn-danger fw-bold"><i class="fa-solid fa-file-pdf me-1"></i> Buka / Download PDF</a>
+                    </td></tr>`;
+                } else {
+                    tbodyId.innerHTML += `<tr><td class="bg-light fw-bold text-uppercase">LAMPIRAN BERKAS</td><td colspan="3" class="text-muted"><i class="fa-solid fa-circle-xmark me-1"></i> Tidak ada file PDF yang dilampirkan</td></tr>`;
+                }
+
+                // 2. Render Simpanan
+                if(d.simpanan) {
+                    document.getElementById('detSimpananPokok').innerText = formatRp(d.simpanan.simpanan_pokok);
+                    document.getElementById('detSimpananWajib').innerText = formatRp(d.simpanan.simpanan_wajib);
+                    document.getElementById('detTotalSimpanan').innerText = formatRp(d.simpanan.total_simpanan);
+                } else {
+                    document.getElementById('detSimpananPokok').innerText = 'Rp 0';
+                    document.getElementById('detSimpananWajib').innerText = 'Rp 0';
+                    document.getElementById('detTotalSimpanan').innerText = 'Rp 0';
+                }
+
+                // 3. Render Lampiran Tagihan Multiguna
+                let containerMultiguna = document.getElementById('containerMultiguna'); containerMultiguna.innerHTML = '';
+                let dataMultiguna = d.tagihan_utama.filter(t => t.jenis_pinjaman === 'Multiguna');
+                if(dataMultiguna.length > 0) {
+                    let grouped = dataMultiguna.reduce((r, a) => { (r[a.tgl_pencairan] = r[a.tgl_pencairan] || []).push(a); return r; }, {});
+                    for(let k in grouped) containerMultiguna.innerHTML += generateMutasiPinjamanHTML(grouped[k], d.identitas, 'Multiguna');
+                } else { containerMultiguna.innerHTML = `<div class="text-center text-muted py-4">Tidak ada catatan angsuran multiguna.</div>`; }
+
+                // 4. Render Lampiran Tagihan Tempo
+                let containerTempo = document.getElementById('containerTempo'); containerTempo.innerHTML = '';
+                let dataTempo = d.tagihan_utama.filter(t => t.jenis_pinjaman === 'Tempo');
+                if(dataTempo.length > 0) {
+                    let grouped = dataTempo.reduce((r, a) => { (r[a.tgl_pencairan] = r[a.tgl_pencairan] || []).push(a); return r; }, {});
+                    for(let k in grouped) containerTempo.innerHTML += generateMutasiPinjamanHTML(grouped[k], d.identitas, 'Tempo');
+                } else { containerTempo.innerHTML = `<div class="text-center text-muted py-4">Tidak ada catatan angsuran tempo.</div>`; }
+
+                // 5. Render Lampiran Tagihan Urgent Gaji
+                let containerUrgentGaji = document.getElementById('containerUrgentGaji'); containerUrgentGaji.innerHTML = '';
+                let dataUrgentGaji = d.tagihan_urgent.filter(t => t.jenis_dana_urgent === 'Gaji');
+                if(dataUrgentGaji.length > 0) {
+                    let grouped = dataUrgentGaji.reduce((r, a) => { (r[a.tgl_pencairan] = r[a.tgl_pencairan] || []).push(a); return r; }, {});
+                    for(let k in grouped) containerUrgentGaji.innerHTML += generateMutasiUrgentHTML(grouped[k], d.identitas, 'Gaji');
+                } else { containerUrgentGaji.innerHTML = `<div class="text-center text-muted py-4">Tidak ada catatan dana urgent gaji.</div>`; }
+
+                // 6. Render Lampiran Tagihan Urgent THR
+                let containerUrgentTHR = document.getElementById('containerUrgentTHR'); containerUrgentTHR.innerHTML = '';
+                let dataUrgentTHR = d.tagihan_urgent.filter(t => t.jenis_dana_urgent === 'THR');
+                if(dataUrgentTHR.length > 0) {
+                    let grouped = dataUrgentTHR.reduce((r, a) => { (r[a.tgl_pencairan] = r[a.tgl_pencairan] || []).push(a); return r; }, {});
+                    for(let k in grouped) containerUrgentTHR.innerHTML += generateMutasiUrgentHTML(grouped[k], d.identitas, 'THR');
+                } else { containerUrgentTHR.innerHTML = `<div class="text-center text-muted py-4">Tidak ada catatan dana urgent THR.</div>`; }
+
+                // 5. Render Histori Transaksi Anggota
+                let tbodyHis = document.getElementById('tbodyDetailHistori'); tbodyHis.innerHTML = '';
+                if(d.histori_transaksi.length > 0) {
+                    d.histori_transaksi.forEach(his => {
+                        tbodyHis.innerHTML += `<tr>
+                            <td>${his.tanggal}</td><td><span class="badge bg-secondary">${his.account_name}</span></td><td class="small">${his.keterangan}</td>
+                            <td class="text-end text-danger">${his.debit > 0 ? formatRp(his.debit) : '-'}</td><td class="text-end text-success">${his.kredit > 0 ? formatRp(his.kredit) : '-'}</td>
+                        </tr>`;
+                    });
+                } else { tbodyHis.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>`; }
+                
+            } else {
+                alert('Gagal memuat detail anggota: ' + res.message);
+            }
+        });
+    }
+
+    // Proses Submit Form
+    document.getElementById('formIdentitas').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...';
+
+        const formData = new FormData(this);
+        
+        // Validasi Ukuran File (Frontend)
+        const fileInput = document.getElementById('berkasPdf');
+        if (fileInput.files.length > 0) {
+            const fileSizeMB = fileInput.files[0].size / 1024 / 1024;
+            if (fileSizeMB > 5) {
+                alert('Ukuran file PDF tidak boleh melebihi 5 MB!');
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-save me-1"></i> Simpan Data';
+                return;
+            }
+        }
+
+        fetch('/api/identitas', {
+            method: 'POST',
+            // Jangan set Header Content-Type, biarkan browser menangani boundary multipart/form-data
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            const alertBox = document.getElementById('alertBox');
+            if(result.status === 'success') {
+                // Notifikasi sekarang akan menampilkan No Anggota yang baru dibuat
+                alertBox.innerHTML = `<div class="alert alert-success alert-dismissible fade show"><i class="fa-solid fa-check-circle me-2"></i>${result.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                this.reset();
+                
+                // Refresh data tabel dan pindah ke tab tabel
+                loadData();
+                const tabelTab = new bootstrap.Tab(document.getElementById('tabel-tab'));
+                tabelTab.show();
+            } else {
+                alertBox.innerHTML = `<div class="alert alert-danger alert-dismissible fade show"><i class="fa-solid fa-triangle-exclamation me-2"></i>Gagal: ${result.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+            }
+        })
+        .catch(error => {
+            document.getElementById('alertBox').innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Terjadi kesalahan pada server.</div>`;
+        })
+        .finally(() => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-save me-1"></i> Simpan Data';
+            window.scrollTo(0, 0);
+        });
+    });
+
+    // Fungsi Buka Modal Edit
+    function bukaModalEdit(no_anggota) {
+        const modalEl = document.getElementById('modalEditAnggota');
+        const myModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        myModal.show();
+        
+        const form = document.getElementById('formEditIdentitas');
+        form.reset();
+        form.no_anggota.value = no_anggota;
+        
+        fetch(`/api/anggota/${no_anggota}/detail`)
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                const d = res.data.identitas;
+                const safeVal = (val) => (val && val !== 'null') ? val : '';
+                
+                form.nama_anggota.value = safeVal(d.nama_anggota);
+                form.tgl_lahir.value = safeVal(d.tgl_lahir);
+                form.no_telp.value = safeVal(d.no_telp);
+                form.nik_ktp.value = safeVal(d.nik_ktp);
+                form.nik_kk.value = safeVal(d.nik_kk);
+                form.alamat_ktp.value = safeVal(d.alamat_ktp);
+                form.alamat_tagih.value = safeVal(d.alamat_tagih);
+                form.status_tempat_tinggal.value = safeVal(d.status_tempat_tinggal);
+                form.email.value = safeVal(d.email);
+                form.pt_instansi.value = safeVal(d.pt_instansi);
+                form.status_karyawan.value = safeVal(d.status_karyawan);
+                form.jabatan.value = safeVal(d.jabatan);
+                form.awal_bekerja.value = safeVal(d.awal_bekerja);
+                form.lama_kerja.value = safeVal(d.lama_kerja);
+                form.akhir_bekerja.value = safeVal(d.akhir_bekerja);
+                form.no_jmo.value = safeVal(d.no_jmo);
+                form.status_jmo.value = safeVal(d.status_jmo);
+                form.no_rek.value = safeVal(d.no_rek);
+                form.bank.value = safeVal(d.bank);
+                form.nama_penanggung_jawab.value = safeVal(d.nama_penanggung_jawab);
+                form.no_telp_penanggung_jawab.value = safeVal(d.no_telp_penanggung_jawab);
+                form.no_rek_penanggung_jawab.value = safeVal(d.no_rek_penanggung_jawab);
+                form.bank_penanggung_jawab.value = safeVal(d.bank_penanggung_jawab);
+                form.kol.value = safeVal(d.kol);
+                form.kriteria.value = safeVal(d.kriteria);
+                if(form.marketing) form.marketing.value = safeVal(d.marketing);
+            } else { alert("Gagal mengambil data: " + res.message); }
+        });
+    }
+
+    // Submit Edit Form Identitas
+    document.getElementById('formEditIdentitas').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btnSubmit = document.getElementById('btnSubmitEdit');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...';
+
+        const formData = new FormData(this);
+        const fileInput = document.getElementById('editBerkasPdf');
+        if (fileInput.files.length > 0 && (fileInput.files[0].size / 1024 / 1024 > 5)) {
+            alert('Ukuran file PDF tidak boleh melebihi 5 MB!');
+            btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fa-solid fa-save me-1"></i> Update Data';
+            return;
+        }
+
+        fetch('/api/identitas', { method: 'PUT', body: formData })
+        .then(response => response.json())
+        .then(result => {
+            if(result.status === 'success') {
+                bootstrap.Modal.getInstance(document.getElementById('modalEditAnggota')).hide();
+                loadData(); document.getElementById('alertBoxMain').innerHTML = `<div class="alert alert-success alert-dismissible fade show"><i class="fa-solid fa-check-circle me-2"></i>${result.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+            } else { alert('Gagal mengupdate: ' + result.message); }
+        }).finally(() => { btnSubmit.disabled = false; btnSubmit.innerHTML = '<i class="fa-solid fa-save me-1"></i> Update Data'; });
+    });
+
+    // FUNGSI UBAH JATUH TEMPO
+    function editJatuhTempo(jenis, idTagihan, tglLama, noAnggota) {
+        let tglBaru = prompt(`Ubah Tanggal Jatuh Tempo (Format: YYYY-MM-DD)\nTanggal Lama: ${tglLama}`, tglLama);
+        if (tglBaru && tglBaru !== tglLama) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(tglBaru)) {
+                alert("Format tanggal salah! Gunakan format YYYY-MM-DD.");
+                return;
+            }
+            
+            fetch('/api/update_jatuh_tempo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jenis_pinjaman: jenis, id_tagihan: idTagihan, tanggal_baru: tglBaru })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    lihatDetail(noAnggota); // Langsung refresh layar detail
+                } else {
+                    alert('Gagal mengubah tanggal: ' + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Terjadi kesalahan sistem.');
+            });
+        }
+    }
+</script>
+{% endblock %}

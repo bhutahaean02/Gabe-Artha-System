@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Dana Urgent - Koperasi{% endblock %}
+{% block page_title %}Pencairan Dana Urgent (Gaji / THR){% endblock %}
+
+{% block content %}
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2">
+        <h5 class="mb-0 text-warning"><i class="fa-solid fa-bolt me-2"></i> Form Pencairan Dana Urgent</h5>
+    </div>
+    
+    <div class="card-body">
+        <form id="formDanaUrgent">
+            <div id="alertBox"></div>
+
+            <div class="row g-4">
+                <!-- Kolom Kiri: Data Anggota -->
+                <div class="col-lg-6">
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Peminjam</h6>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Pilih Nomor Anggota *</label>
+                            <select name="no_anggota" id="selectAnggota" class="form-select" required>
+                                <option value="" selected disabled>-- Sedang Memuat Data --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Nama Anggota</label>
+                            <input type="text" name="nama_anggota" id="inputNamaAnggota" class="form-control bg-light" readonly>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Jenis Dana Urgent *</label>
+                            <select name="jenis_dana_urgent" class="form-select" required>
+                                <option value="Gaji">Dana Urgent Gaji</option>
+                                <option value="THR">Dana Urgent THR</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan: Rincian Nominal & Tanggal -->
+                <div class="col-lg-6">
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Rincian Nominal & Tanggal</h6>
+                    <div class="bg-light p-3 rounded border">
+                        
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-primary">Tanggal Pencairan *</label>
+                                <input type="date" name="tanggal_pencairan_dana_urgent" class="form-control border-primary" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-danger">Tgl Pembayaran (Jatuh Tempo) *</label>
+                                <input type="date" name="tanggal_pembayaran_dana_urgent" class="form-control border-danger" required>
+                                <small class="text-muted" style="font-size:11px;">Hanya 1 bulan (Lunas)</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold text-success">Jumlah Dana Urgent (Rp) *</label>
+                                <input type="number" name="jumlah_dana_urgent" class="form-control form-control-lg border-success fw-bold text-success" placeholder="Contoh: 3000000" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold">Margin / Jasa (Rp) *</label>
+                                <input type="number" name="margin_dana_urgent" class="form-control" placeholder="Contoh: 150000" required>
+                            </div>
+                        </div>
+
+                        <!-- Info Singkat -->
+                        <div class="alert alert-info mt-3 mb-0 py-2 small border-0">
+                            <i class="fa-solid fa-circle-info me-1"></i> Data tagihan akan otomatis dibuat 1 kali bayar penuh pada tabel angsuran saat disimpan.
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end border-top pt-3 mt-4">
+                <button type="submit" id="btnSubmit" class="btn btn-warning text-dark px-5 btn-lg shadow fw-bold"><i class="fa-solid fa-bolt me-2"></i> Proses Dana Urgent</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Ambil Daftar Anggota saat halaman dimuat menggunakan API yang sudah ada
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/anggota_list')
+        .then(response => response.json())
+        .then(res => {
+            const select = document.getElementById('selectAnggota');
+            select.innerHTML = '<option value="" selected disabled>-- Pilih Nomor Anggota --</option>';
+            if(res.status === 'success') {
+                res.data.forEach(item => {
+                    select.innerHTML += `<option value="${item.no_anggota}" data-nama="${item.nama_anggota}">${item.no_anggota} - ${item.nama_anggota}</option>`;
+                });
+            }
+        });
+    });
+
+    // 2. Otomatis isi Nama Anggota ketika Nomor Anggota dipilih
+    document.getElementById('selectAnggota').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        document.getElementById('inputNamaAnggota').value = selectedOption.getAttribute('data-nama');
+    });
+
+    // 3. Proses Submit Data
+    document.getElementById('formDanaUrgent').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Sedang Memproses...';
+
+        const formData = new FormData(this);
+        const dataObj = Object.fromEntries(formData.entries());
+
+        fetch('/api/pencairan_urgent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataObj)
+        })
+        .then(response => response.json())
+        .then(result => {
+            const alertBox = document.getElementById('alertBox');
+            if(result.status === 'success') {
+                alertBox.innerHTML = `<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check me-2"></i>${result.message} <button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                this.reset();
+                window.scrollTo(0,0);
+            } else {
+                alertBox.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Gagal: ${result.message}</div>`;
+            }
+        })
+        .catch(err => {
+            document.getElementById('alertBox').innerHTML = `<div class="alert alert-danger">Terjadi kesalahan saat menghubungi server.</div>`;
+        })
+        .finally(() => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-bolt me-2"></i> Proses Dana Urgent';
+        });
+    });
+</script>
+{% endblock %}

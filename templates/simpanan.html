@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Simpanan Anggota - Koperasi{% endblock %}
+{% block page_title %}Buku Simpanan Anggota{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-primary border-4 h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Simpanan Pokok</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800" id="totSimpananPokok">Rp 0</div>
+                    </div>
+                    <div class="col-auto"><i class="fa-solid fa-piggy-bank fa-2x text-light"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-success border-4 h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Total Simpanan Wajib</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800" id="totSimpananWajib">Rp 0</div>
+                    </div>
+                    <div class="col-auto"><i class="fa-solid fa-vault fa-2x text-light"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm border-start border-info border-4 h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Total Keseluruhan</div>
+                        <div class="h3 mb-0 fw-bold text-gray-800" id="totSemuaSimpanan">Rp 0</div>
+                    </div>
+                    <div class="col-auto"><i class="fa-solid fa-sack-dollar fa-2x text-light"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-2 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-primary"><i class="fa-solid fa-list-ol me-2"></i> Daftar Simpanan Anggota</h5>
+        <button class="btn btn-danger btn-sm shadow" data-bs-toggle="modal" data-bs-target="#modalTarikSimpanan">
+            <i class="fa-solid fa-hand-holding-dollar me-1"></i> Penarikan Simpanan
+        </button>
+    </div>
+    <div class="card-body bg-light p-3">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle table-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">No Anggota</th>
+                        <th>Nama Anggota</th>
+                        <th class="text-end">Simpanan Pokok</th>
+                        <th class="text-end">Simpanan Wajib</th>
+                        <th class="text-end pe-3">Total Simpanan</th>
+                    </tr>
+                </thead>
+                <tbody id="tableSimpanan">
+                    <tr><td colspan="5" class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data simpanan...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Penarikan Simpanan -->
+<div class="modal fade" id="modalTarikSimpanan" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-money-bill-wave me-2"></i> Form Penarikan Simpanan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formPenarikan">
+                <div class="modal-body bg-light">
+                    <div id="alertBox"></div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Anggota *</label>
+                        <select name="no_anggota" id="selectAnggota" class="form-select border-danger" required>
+                            <option value="" selected disabled>-- Memuat Data --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body bg-white py-2 px-3 border-start border-3 border-danger">
+                            <small class="text-muted d-block">Saldo Tersedia:</small>
+                            <div class="row mt-1">
+                                <div class="col-6"><small class="fw-bold">Pokok:</small> <span id="lblSaldoPokok" class="text-primary fw-bold">Rp 0</span></div>
+                                <div class="col-6"><small class="fw-bold">Wajib:</small> <span id="lblSaldoWajib" class="text-success fw-bold">Rp 0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Jenis Simpanan Ditarik *</label>
+                        <select name="jenis_simpanan" class="form-select" required>
+                            <option value="wajib">Simpanan Wajib</option>
+                            <option value="pokok">Simpanan Pokok</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nominal Penarikan (Rp) *</label>
+                        <input type="number" name="nominal" class="form-control fw-bold text-danger" placeholder="0" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" id="btnProsesTarik" class="btn btn-danger fw-bold"><i class="fa-solid fa-check me-1"></i> Proses Penarikan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const formatRp = (angka) => 'Rp ' + Number(angka).toLocaleString('id-ID');
+    let saldoData = {};
+
+    function loadSimpanan() {
+        fetch('/api/simpanan').then(res => res.json()).then(res => {
+            if(res.status === 'success') {
+                document.getElementById('totSimpananPokok').innerText = formatRp(res.summary.total_pokok);
+                document.getElementById('totSimpananWajib').innerText = formatRp(res.summary.total_wajib);
+                document.getElementById('totSemuaSimpanan').innerText = formatRp(res.summary.total_semua);
+
+                const tbody = document.getElementById('tableSimpanan');
+                const select = document.getElementById('selectAnggota');
+                tbody.innerHTML = ''; select.innerHTML = '<option value="" selected disabled>-- Pilih Anggota --</option>';
+                
+                if(res.data.length > 0) {
+                    res.data.forEach(row => {
+                        saldoData[row.nomor_anggota] = { pokok: row.simpanan_pokok, wajib: row.simpanan_wajib };
+                        tbody.innerHTML += `<tr>
+                            <td class="ps-3"><span class="badge bg-secondary">${row.nomor_anggota}</span></td>
+                            <td class="fw-bold">${row.nama_anggota}</td>
+                            <td class="text-end text-primary">${formatRp(row.simpanan_pokok)}</td>
+                            <td class="text-end text-success">${formatRp(row.simpanan_wajib)}</td>
+                            <td class="text-end fw-bold pe-3">${formatRp(row.total_simpanan)}</td>
+                        </tr>`;
+                        select.innerHTML += `<option value="${row.nomor_anggota}">${row.nomor_anggota} - ${row.nama_anggota}</option>`;
+                    });
+                } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Belum ada data simpanan tercatat.</td></tr>'; }
+            }
+        });
+    }
+
+    document.getElementById('selectAnggota').addEventListener('change', function() {
+        const no = this.value;
+        if(saldoData[no]) {
+            document.getElementById('lblSaldoPokok').innerText = formatRp(saldoData[no].pokok);
+            document.getElementById('lblSaldoWajib').innerText = formatRp(saldoData[no].wajib);
+        }
+    });
+
+    document.getElementById('formPenarikan').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnProsesTarik');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+        const payload = Object.fromEntries(new FormData(this).entries());
+
+        fetch('/api/penarikan_simpanan', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        }).then(res => res.json()).then(res => {
+            const alertBox = document.getElementById('alertBox');
+            if(res.status === 'success') {
+                alertBox.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-check-circle me-1"></i> ${res.message}</div>`;
+                this.reset(); document.getElementById('lblSaldoPokok').innerText = 'Rp 0'; document.getElementById('lblSaldoWajib').innerText = 'Rp 0';
+                loadSimpanan(); setTimeout(() => alertBox.innerHTML = '', 3000);
+            } else { alertBox.innerHTML = `<div class="alert alert-danger">${res.message}</div>`; }
+        }).finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Proses Penarikan'; });
+    });
+
+    document.addEventListener('DOMContentLoaded', loadSimpanan);
+</script>
+{% endblock %}

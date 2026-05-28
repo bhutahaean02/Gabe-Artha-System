@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Neraca - Koperasi{% endblock %}
+{% block page_title %}Laporan Neraca (Balance Sheet){% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body bg-white py-3">
+        <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Pilih Rentang</label>
+                <select id="presetFilter" class="form-select border-primary">
+                    <option value="all">Semua Waktu</option>
+                    <option value="today">Hari Ini</option>
+                    <option value="this_month">Bulan Ini</option>
+                    <option value="this_year">Tahun Ini</option>
+                    <option value="custom">Pilih Tanggal Manual</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Tanggal Awal</label>
+                <input type="date" id="startDate" name="start_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Tanggal Akhir</label>
+                <input type="date" id="endDate" name="end_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-filter me-1"></i> Terapkan Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="m-0 fw-bold text-primary"><i class="fa-solid fa-scale-balanced me-2"></i>Neraca Keuangan</h5>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('filterForm').dispatchEvent(new Event('submit'))"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        </div>
+    </div>
+    <div class="card-body p-4 bg-light">
+        
+        <!-- Indikator Balance -->
+        <div id="balanceIndicator" class="alert text-center fw-bold shadow-sm" style="display: none;"></div>
+
+        <div class="row g-4">
+            <!-- KOLOM KIRI: AKTIVA -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-primary text-white fw-bold">AKTIVA (HARTA)</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <tbody id="tbodyAktiva">
+                                <tr><td class="text-center text-muted py-3">Memuat data...</td></tr>
+                            </tbody>
+                            <tfoot class="table-light fw-bold border-top-2">
+                                <tr>
+                                    <td class="text-end">TOTAL AKTIVA:</td>
+                                    <td class="text-end text-primary fs-5" id="valTotalAktiva" width="40%">Rp 0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KOLOM KANAN: PASIVA -->
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-success text-white fw-bold">PASIVA (KEWAJIBAN & EKUITAS)</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <tbody id="tbodyPasiva">
+                                <tr><td class="text-center text-muted py-3">Memuat data...</td></tr>
+                            </tbody>
+                            <tfoot class="table-light fw-bold border-top-2">
+                                <tr>
+                                    <td class="text-end">TOTAL PASIVA:</td>
+                                    <td class="text-end text-success fs-5" id="valTotalPasiva" width="40%">Rp 0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function formatRp(angka) {
+        return 'Rp ' + Number(angka).toLocaleString('id-ID');
+    }
+
+    function renderTable(tbodyId, dataList) {
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = '';
+        dataList.forEach(item => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><span class="text-muted me-2">[${item.account_code}]</span> ${item.account_name}</td>
+                    <td class="text-end fw-medium" width="40%">${formatRp(item.saldo)}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function loadNeraca(start = '', end = '') {
+        let url = '/api/neraca';
+        if (start && end) url += `?start_date=${start}&end_date=${end}`;
+        else if (start) url += `?start_date=${start}`;
+        else if (end) url += `?end_date=${end}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    const data = res.data;
+                    
+                    // Render Aktiva
+                    renderTable('tbodyAktiva', data.aktiva);
+                    document.getElementById('valTotalAktiva').innerText = formatRp(data.total_aktiva);
+
+                    // Render Pasiva (Gabungan Kewajiban, Ekuitas, & Laba)
+                    let pasivaHtml = '<tr class="table-light"><td colspan="2" class="fw-bold text-secondary">KEWAJIBAN (HUTANG/TITIPAN)</td></tr>';
+                    data.kewajiban.forEach(i => { pasivaHtml += `<tr><td><span class="text-muted me-2">[${i.account_code}]</span> ${i.account_name}</td><td class="text-end fw-medium" width="40%">${formatRp(i.saldo)}</td></tr>`; });
+                    
+                    pasivaHtml += '<tr class="table-light"><td colspan="2" class="fw-bold text-secondary">EKUITAS (MODAL)</td></tr>';
+                    data.ekuitas.forEach(i => { pasivaHtml += `<tr><td><span class="text-muted me-2">[${i.account_code}]</span> ${i.account_name}</td><td class="text-end fw-medium">${formatRp(i.saldo)}</td></tr>`; });
+                    
+                    pasivaHtml += `<tr><td>Laba (Rugi) Tahun Berjalan</td><td class="text-end fw-bold ${data.laba_berjalan < 0 ? 'text-danger' : 'text-success'}">${formatRp(data.laba_berjalan)}</td></tr>`;
+                    document.getElementById('tbodyPasiva').innerHTML = pasivaHtml;
+                    document.getElementById('valTotalPasiva').innerText = formatRp(data.total_pasiva);
+
+                    // Indikator Balance
+                    const indicator = document.getElementById('balanceIndicator');
+                    indicator.style.display = 'block';
+                    const isBalanced = Math.round(data.total_aktiva) === Math.round(data.total_pasiva);
+                    indicator.className = isBalanced ? 'alert alert-success text-center fw-bold shadow-sm' : 'alert alert-danger text-center fw-bold shadow-sm';
+                    indicator.innerHTML = isBalanced ? '<i class="fa-solid fa-check-circle me-2"></i> STATUS: SEIMBANG (BALANCED)' : '<i class="fa-solid fa-triangle-exclamation me-2"></i> STATUS: TIDAK SEIMBANG (UNBALANCED)';
+                }
+            }).catch(err => console.error(err));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadNeraca();
+
+        const presetFilter = document.getElementById('presetFilter');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const form = document.getElementById('filterForm');
+
+        presetFilter.addEventListener('change', function() {
+            const val = this.value;
+            const today = new Date();
+            const formatDate = (d) => {
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            };
+
+            if (val === 'custom') {
+                startDate.disabled = false; endDate.disabled = false;
+            } else {
+                startDate.disabled = true; endDate.disabled = true;
+                if (val === 'today') {
+                    startDate.value = formatDate(today); endDate.value = formatDate(today);
+                } else if (val === 'this_month') {
+                    startDate.value = formatDate(new Date(today.getFullYear(), today.getMonth(), 1));
+                    endDate.value = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+                } else if (val === 'this_year') {
+                    startDate.value = formatDate(new Date(today.getFullYear(), 0, 1));
+                    endDate.value = formatDate(new Date(today.getFullYear(), 11, 31));
+                } else {
+                    startDate.value = ''; endDate.value = '';
+                }
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadNeraca(startDate.value, endDate.value);
+        });
+    });
+</script>
+{% endblock %}

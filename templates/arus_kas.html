@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Arus Kas - Koperasi{% endblock %}
+{% block page_title %}Laporan Mutasi Arus Kas (Cash Flow){% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body bg-white py-3">
+        <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Pilih Rentang Waktu</label>
+                <select id="presetFilter" class="form-select border-success">
+                    <option value="this_month">Bulan Ini</option>
+                    <option value="today">Hari Ini</option>
+                    <option value="this_year">Tahun Ini</option>
+                    <option value="custom">Pilih Tanggal Manual</option>
+                    <option value="all">Semua Waktu</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Tanggal Awal</label>
+                <input type="date" id="startDate" name="start_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Tanggal Akhir</label>
+                <input type="date" id="endDate" name="end_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-success w-100"><i class="fa-solid fa-filter me-1"></i> Terapkan Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="m-0 fw-bold text-success"><i class="fa-solid fa-money-bill-transfer me-2"></i>Laporan Mutasi Arus Kas</h5>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('filterForm').dispatchEvent(new Event('submit'))"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        </div>
+    </div>
+    <div class="card-body p-0 bg-light">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle table-sm m-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Tanggal</th>
+                        <th>Sumber / Tujuan (Akun)</th>
+                        <th>Keterangan Transaksi</th>
+                        <th class="text-end">Uang Masuk (Debit)</th>
+                        <th class="text-end">Uang Keluar (Kredit)</th>
+                        <th class="text-end pe-3">Saldo Kas Berjalan</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyArusKas">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function formatRp(angka) {
+        return 'Rp ' + Number(angka).toLocaleString('id-ID');
+    }
+
+    function loadArusKas(start = '', end = '') {
+        const tbody = document.getElementById('tbodyArusKas');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data...</td></tr>';
+        
+        let url = '/api/arus_kas';
+        if (start && end) url += `?start_date=${start}&end_date=${end}`;
+        else if (start) url += `?start_date=${start}`;
+        else if (end) url += `?end_date=${end}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    tbody.innerHTML = '';
+                    let saldo = res.data.saldo_awal;
+                    
+                    // Tampilkan saldo awal jika rentang waktu dipilih
+                    if (start || end) {
+                        tbody.innerHTML += `
+                            <tr class="table-light fw-bold">
+                                <td colspan="5" class="text-end text-secondary">SALDO AWAL KAS :</td>
+                                <td class="text-end pe-3 text-secondary">${formatRp(saldo)}</td>
+                            </tr>
+                        `;
+                    }
+
+                    if (res.data.mutasi.length === 0) {
+                        tbody.innerHTML += '<tr><td colspan="6" class="text-center py-3 text-muted">Tidak ada transaksi kas pada periode ini.</td></tr>';
+                    } else {
+                        res.data.mutasi.forEach(row => {
+                            let masuk = Number(row.masuk) || 0;
+                            let keluar = Number(row.keluar) || 0;
+                            saldo += (masuk - keluar);
+                            
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td class="ps-3">${row.tanggal}</td>
+                                    <td><span class="badge bg-secondary">${row.account_name}</span></td>
+                                    <td>${row.keterangan}</td>
+                                    <td class="text-end text-success">${masuk > 0 ? formatRp(masuk) : '-'}</td>
+                                    <td class="text-end text-danger">${keluar > 0 ? formatRp(keluar) : '-'}</td>
+                                    <td class="text-end fw-bold pe-3">${formatRp(saldo)}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            }).catch(err => console.error(err));
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filterForm');
+        const presetFilter = document.getElementById('presetFilter');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+
+        presetFilter.addEventListener('change', function() {
+            const val = this.value;
+            const today = new Date();
+            const formatDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+            if (val === 'custom') { startDate.disabled = false; endDate.disabled = false; } 
+            else {
+                startDate.disabled = true; endDate.disabled = true;
+                if (val === 'today') { startDate.value = formatDate(today); endDate.value = formatDate(today); } 
+                else if (val === 'this_month') { startDate.value = formatDate(new Date(today.getFullYear(), today.getMonth(), 1)); endDate.value = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0)); } 
+                else if (val === 'this_year') { startDate.value = formatDate(new Date(today.getFullYear(), 0, 1)); endDate.value = formatDate(new Date(today.getFullYear(), 11, 31)); } 
+                else { startDate.value = ''; endDate.value = ''; }
+            }
+        });
+        presetFilter.dispatchEvent(new Event('change'));
+        loadArusKas(startDate.value, endDate.value);
+
+        form.addEventListener('submit', (e) => { e.preventDefault(); loadArusKas(startDate.value, endDate.value); });
+    });
+</script>
+{% endblock %}

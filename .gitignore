@@ -1,0 +1,17 @@
+# Folder Environment (Virtual Env)
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Konfigurasi Lokal & Password
+.env
+
+# File Upload Pengguna (Opsional)
+uploads/
+
+# Editor Settings
+.vscode/

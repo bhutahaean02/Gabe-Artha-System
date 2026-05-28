@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Koperasi Gabe Artha{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow-x: hidden; }
+        
+        .sidebar {
+            min-height: 100vh;
+            background-color: #2c3e50;
+            color: white;
+            position: sticky;
+            top: 0;
+            transition: margin 0.3s ease-in-out;
+        }
+        /* Class tambahan untuk menyembunyikan sidebar saat presentasi */
+        .sidebar.collapsed {
+            margin-left: -260px;
+        }
+        
+        .sidebar a {
+            color: #bdc3c7;
+            text-decoration: none;
+            padding: 12px 15px;
+            display: block;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            transition: 0.2s ease-in-out;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #34495e;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        .content-wrapper { padding: 25px; }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        
+        <!-- SIDEBAR -->
+        <div class="sidebar flex-shrink-0 p-3 shadow-lg" style="width: 260px;">
+            <h4 class="text-center mb-4 mt-2 text-white border-bottom border-secondary pb-3 fw-bold">
+                <i class="fa-solid fa-building-columns me-2 text-info"></i> Gabe Artha
+            </h4>
+            <ul class="nav nav-pills flex-column mb-auto">
+                {% if session.get('role') in ['Admin', 'Manager'] %}
+                <li class="nav-item">
+                    <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}"><i class="fa-solid fa-gauge me-2 w-20px"></i> Dashboard</a>
+                </li>
+                {% if session.get('role') == 'Manager' %}
+                <li class="mt-3 mb-1 small text-uppercase text-danger fw-bold px-3">Approval</li>
+                <li>
+                    <a href="/approval" class="nav-link {% if request.path == '/approval' %}active{% endif %}"><i class="fa-solid fa-check-double me-2 w-20px text-danger"></i> Approval Transaksi</a>
+                </li>
+                {% endif %}
+                <li>
+                    <a href="/identitas" class="nav-link {% if request.path == '/identitas' %}active{% endif %}"><i class="fa-solid fa-users me-2 w-20px"></i> Data Anggota</a>
+                </li>
+                <li>
+                    <a href="/monitoring_pinjaman" class="nav-link {% if request.path == '/monitoring_pinjaman' %}active{% endif %}"><i class="fa-solid fa-display me-2 w-20px text-info"></i> Monitoring Pinjaman</a>
+                </li>
+                <li class="mt-3 mb-1 small text-uppercase text-secondary fw-bold px-3">Transaksi</li>
+                <li>
+                    <a href="/pencairan" class="nav-link {% if request.path == '/pencairan' %}active{% endif %}"><i class="fa-solid fa-money-bill-transfer me-2 w-20px"></i> Pencairan Multiguna</a>
+                </li>
+                <li>
+                    <a href="/pencairan_urgent" class="nav-link {% if request.path == '/pencairan_urgent' %}active{% endif %}"><i class="fa-solid fa-bolt me-2 w-20px text-warning"></i> Dana Urgent</a>
+                </li>
+                <li>
+                    <a href="/pembayaran" class="nav-link {% if request.path == '/pembayaran' %}active{% endif %}"><i class="fa-solid fa-hand-holding-dollar me-2 w-20px"></i> Pembayaran Angsuran</a>
+                </li>
+                <li>
+                    <a href="/simpanan" class="nav-link {% if request.path == '/simpanan' %}active{% endif %}"><i class="fa-solid fa-piggy-bank me-2 w-20px" style="color: #ffb8c6;"></i> Buku Simpanan</a>
+                </li>
+                <li class="mt-3 mb-1 small text-uppercase text-secondary fw-bold px-3">Akuntansi</li>
+                <li>
+                    <a href="/pengeluaran" class="nav-link {% if request.path == '/pengeluaran' %}active{% endif %}"><i class="fa-solid fa-receipt me-2 w-20px"></i> Pengeluaran Op.</a>
+                </li>
+                <li>
+                    <a href="/realisasi_anggaran" class="nav-link {% if request.path == '/realisasi_anggaran' %}active{% endif %}"><i class="fa-solid fa-bullseye me-2 w-20px text-warning"></i> Realisasi Anggaran</a>
+                </li>
+                <li>
+                    <a href="/laba_rugi" class="nav-link {% if request.path == '/laba_rugi' %}active{% endif %}"><i class="fa-solid fa-chart-line me-2 w-20px"></i> Laba / Rugi</a>
+                </li>
+                <li class="mt-3 mb-1 small text-uppercase text-secondary fw-bold px-3">Laporan</li>
+                <li>
+                    <a href="/buku_besar" class="nav-link {% if request.path == '/buku_besar' %}active{% endif %}"><i class="fa-solid fa-book-journal-whills me-2 w-20px"></i> Buku Besar & Jurnal</a>
+                </li>
+                <li>
+                    <a href="/neraca" class="nav-link {% if request.path == '/neraca' %}active{% endif %}"><i class="fa-solid fa-scale-balanced me-2 w-20px"></i> Neraca</a>
+                </li>
+                <li>
+                    <a href="/arus_kas" class="nav-link {% if request.path == '/arus_kas' %}active{% endif %}"><i class="fa-solid fa-money-bill-transfer me-2 w-20px text-success"></i> Arus Kas</a>
+                </li>
+                <li>
+                    <a href="/laporan_harian" class="nav-link {% if request.path == '/laporan_harian' %}active{% endif %}"><i class="fa-solid fa-file-invoice me-2 w-20px text-danger"></i> Laporan Harian</a>
+                </li>
+                <li class="mt-3 mb-1 small text-uppercase text-secondary fw-bold px-3">Dokumen</li>
+                <li>
+                    <a href="/cetak_berkas" class="nav-link {% if request.path == '/cetak_berkas' %}active{% endif %}"><i class="fa-solid fa-print me-2 w-20px text-info"></i> Pusat Cetak Berkas</a>
+                </li>
+                {% endif %}
+                {% if session.get('role') == 'Anggota' %}
+                <li class="nav-item">
+                    <a href="/dashboard_anggota" class="nav-link active"><i class="fa-solid fa-id-card me-2 w-20px"></i> Kartu & Tagihan Saya</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- KONTEN UTAMA -->
+        <div class="content-wrapper flex-grow-1 w-100 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4 bg-white p-3 rounded shadow-sm">
+                <div class="d-flex align-items-center">
+                    <button id="sidebarToggle" class="btn btn-sm btn-outline-secondary me-3" title="Sembunyikan Menu (Fokus Layar)"><i class="fa-solid fa-bars"></i></button>
+                    <h2 class="h5 mb-0 text-gray-800 fw-bold">{% block page_title %}Halaman{% endblock %}</h2>
+                </div>
+                <div class="d-flex align-items-center">
+                    <button id="fullscreenToggle" class="btn btn-sm btn-light border me-3" title="Mode Presentasi (Layar Penuh)"><i class="fa-solid fa-expand text-primary"></i></button>
+                    <span class="text-muted me-3"><i class="fa-solid fa-calendar-day me-1"></i> <span id="currentDate"></span></span>
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle border" type="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-user-circle text-primary me-1"></i> {{ session.get('nama', 'Pengguna') }} ({{ session.get('role', '') }})
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item text-danger" href="/logout"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Area untuk disisipkan konten dari masing-masing halaman -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Skrip General -->
+    <script>
+        // Menampilkan Tanggal Hari Ini di Header
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('id-ID', options);
+        
+        // Fitur 1: Toggle Sidebar (Menyembunyikan Menu Samping)
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+        });
+
+        // Fitur 2: Mode Layar Penuh (Fullscreen untuk Presentasi)
+        document.getElementById('fullscreenToggle').addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+                this.innerHTML = '<i class="fa-solid fa-compress text-primary"></i>';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    this.innerHTML = '<i class="fa-solid fa-expand text-primary"></i>';
+                }
+            }
+        });
+    </script>
+    
+    <!-- Area untuk disisipkan skrip dari masing-masing halaman -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

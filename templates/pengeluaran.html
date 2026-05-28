@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Pengeluaran Operasional - Koperasi{% endblock %}
+{% block page_title %}Pengeluaran & Cashflow Akuntansi{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Kolom Form Pengeluaran -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-3 pb-2">
+                <h6 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-receipt me-2"></i> Input Pengeluaran Baru</h6>
+            </div>
+            <div class="card-body">
+                <div id="alertBox"></div>
+                <form id="formPengeluaran">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Tanggal Transaksi *</label>
+                        <input type="date" id="inputTanggal" name="tanggal" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Sumber Dana (Kredit) *</label>
+                        <select name="coa_sumber_dana_id" id="sumberDana" class="form-select border-primary" required>
+                            <option value="">-- Pilih Akun Kas/Bank --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Akun Beban (Debit) *</label>
+                        <select name="coa_beban_id" id="akunBeban" class="form-select border-danger" required>
+                            <option value="">-- Pilih Akun Biaya --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nominal (Rp) *</label>
+                        <input type="number" name="nominal" class="form-control fw-bold text-danger fs-5" placeholder="0" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Keterangan / Catatan *</label>
+                        <textarea name="keterangan" class="form-control" rows="2" placeholder="Contoh: Beli token listrik bulan ini..." required></textarea>
+                    </div>
+                    <button type="submit" id="btnSubmit" class="btn btn-primary w-100 fw-bold shadow-sm"><i class="fa-solid fa-save me-1"></i> Simpan Transaksi</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kolom History Cashflow -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-clock-rotate-left me-2"></i> Riwayat Cashflow (Jurnal)</h6>
+                <button class="btn btn-sm btn-outline-secondary shadow-sm fw-bold" onclick="loadHistory()"><i class="fa-solid fa-rotate-right me-1"></i> Refresh</button>
+            </div>
+            <div class="card-body bg-light p-0">
+                <div class="table-responsive" style="max-height: 550px;">
+                    <table class="table table-hover align-middle mb-0 text-sm">
+                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                            <tr>
+                                <th class="ps-3">Tanggal</th>
+                                <th>Kode</th>
+                                <th>Akun (COA)</th>
+                                <th>Keterangan</th>
+                                <th class="text-end">Debit</th>
+                                <th class="text-end pe-3">Kredit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableHistoryCashflow">
+                            <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat histori cashflow...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('inputTanggal').value = new Date().toISOString().split('T')[0];
+        
+        // Memuat daftar Dropdown COA
+        fetch('/api/coa/dropdown').then(r=>r.json()).then(res => {
+            if(res.status === 'success') {
+                const sumberDana = document.getElementById('sumberDana');
+                const akunBeban = document.getElementById('akunBeban');
+                res.data.kas.forEach(coa => sumberDana.innerHTML += `<option value="${coa.id}">[${coa.account_code}] ${coa.account_name}</option>`);
+                res.data.beban.forEach(coa => akunBeban.innerHTML += `<option value="${coa.id}">[${coa.account_code}] ${coa.account_name}</option>`);
+            }
+        });
+        loadHistory();
+    });
+
+    function loadHistory() {
+        fetch('/api/jurnal?filter_type=bulanan&filter_value=' + new Date().toISOString().slice(0,7))
+        .then(r=>r.json()).then(res => {
+            const tbody = document.getElementById('tableHistoryCashflow');
+            tbody.innerHTML = '';
+            if(res.status === 'success' && res.data.length > 0) {
+                res.data.forEach(row => {
+                    const deb = row.debit > 0 ? 'Rp ' + row.debit.toLocaleString('id-ID') : '-';
+                    const kre = row.kredit > 0 ? 'Rp ' + row.kredit.toLocaleString('id-ID') : '-';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3">${row.tanggal}</td>
+                            <td><span class="badge bg-secondary">${row.account_code}</span></td>
+                            <td class="fw-medium">${row.account_name}</td>
+                            <td class="small">${row.keterangan}</td>
+                            <td class="text-end text-danger">${deb}</td>
+                            <td class="text-end text-success pe-3">${kre}</td>
+                        </tr>
+                    `;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Belum ada transaksi bulan ini.</td></tr>'; }
+        });
+    }
+
+    document.getElementById('formPengeluaran').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmit');
+        btn.disabled = true; btn.innerHTML = 'Menyimpan...';
+
+        const payload = Object.fromEntries(new FormData(this).entries());
+        fetch('/api/expenses', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+        }).then(r=>r.json()).then(res => {
+            const box = document.getElementById('alertBox');
+            if(res.status === 'success') {
+                box.innerHTML = `<div class="alert alert-success py-2"><i class="fa-solid fa-check-circle me-1"></i> ${res.message}</div>`;
+                this.reset();
+                document.getElementById('inputTanggal').value = new Date().toISOString().split('T')[0];
+                loadHistory(); // Reload history secara instan
+            } else { box.innerHTML = `<div class="alert alert-danger py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> ${res.message}</div>`; }
+        }).finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Simpan Transaksi'; });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Laba Rugi - Koperasi{% endblock %}
+{% block page_title %}Laporan Laba / Rugi Berjalan{% endblock %}
+
+{% block content %}
+
+<div class="card shadow border-0">
+    <div class="card-body p-4 bg-white">
+        
+        <!-- Header Laporan -->
+        <div class="text-center position-relative mb-4 border-bottom pb-3">
+            <h4 class="mb-1 fw-bold text-uppercase">PERHITUNGAN LABA RUGI CABANG</h4>
+            <h6 class="text-muted">Periode : <span id="periodeBulan" class="fw-bold"></span> (Bulan Berjalan)</h6>
+        </div>
+
+        <div class="row">
+            <!-- Kiri: Aktiva / Pendapatan -->
+            <div class="col-md-6 border-end pe-md-4">
+                <table class="table table-borderless table-sm mb-0">
+                    <thead>
+                        <tr class="border-bottom border-dark border-2">
+                            <th class="fw-bold text-uppercase">Aktiva (Pendapatan)</th>
+                            <th class="text-end fw-bold text-uppercase">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablePendapatan">
+                        <!-- Injeksi JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-top border-dark border-2">
+                            <td class="fw-bold fs-6">Total Pendapatan</td>
+                            <td class="text-end fw-bold fs-6 text-success" id="totPendapatan">Rp 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Kanan: Pasiva / Biaya -->
+            <div class="col-md-6 ps-md-4 mt-4 mt-md-0">
+                <table class="table table-borderless table-sm mb-0">
+                    <thead>
+                        <tr class="border-bottom border-dark border-2">
+                            <th class="fw-bold text-uppercase">Pasiva (Biaya)</th>
+                            <th class="text-end fw-bold text-uppercase">Jumlah</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBeban">
+                        <!-- Injeksi JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="border-top border-dark border-2">
+                            <td class="fw-bold fs-6">Total Biaya</td>
+                            <td class="text-end fw-bold fs-6 text-danger" id="totBeban">Rp 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Rekap Laba/Rugi -->
+                <div class="mt-4 pt-3 border-top border-1">
+                    <table class="table table-borderless table-sm mb-0">
+                        <tr>
+                            <td class="fw-bold text-muted">Laba sebelum Pajak</td>
+                            <td class="text-end fw-bold" id="labaSebelum">Rp 0.00</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold text-muted">Pajak</td>
+                            <td class="text-end fw-bold text-muted">Rp 0.00</td>
+                        </tr>
+                        <tr class="border-top border-dark border-2">
+                            <td class="fw-bold fs-5 text-primary">Laba setelah Pajak</td>
+                            <td class="text-end fw-bold fs-5 text-primary" id="labaSetelah">Rp 0.00</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fungsi format Rupiah dengan desimal (seperti format akuntansi .00)
+    function formatRp(angka) {
+        let isNegative = angka < 0;
+        let val = Math.abs(angka);
+        // Menggunakan en-US agar menghasilkan koma di ribuan dan titik di desimal sesuai format contoh Anda
+        let formatted = val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (isNegative ? '-Rp ' : 'Rp ') + formatted;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mengisi Periode Bulan Berjalan Otomatis
+        const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const date = new Date();
+        document.getElementById('periodeBulan').innerText = `${namaBulan[date.getMonth()]} ${date.getFullYear()}`;
+
+        fetch('/api/laba_rugi')
+        .then(response => response.json())
+        .then(res => {
+            if(res.status === 'success') {
+                let tbodyP = document.getElementById('tablePendapatan');
+                let tbodyB = document.getElementById('tableBeban');
+                
+                // Loop Pendapatan
+                res.data.pendapatan.forEach(item => {
+                    tbodyP.innerHTML += `<tr>
+                        <td class="ps-3">${item.account_name}</td>
+                        <td class="text-end">${formatRp(item.saldo)}</td>
+                    </tr>`;
+                });
+                
+                // Loop Biaya/Beban
+                res.data.beban.forEach(item => {
+                    tbodyB.innerHTML += `<tr>
+                        <td class="ps-3">${item.account_name}</td>
+                        <td class="text-end">${formatRp(item.saldo)}</td>
+                    </tr>`;
+                });
+                
+                // Set Total Pendapatan & Biaya
+                document.getElementById('totPendapatan').innerText = formatRp(res.data.total_pendapatan);
+                document.getElementById('totBeban').innerText = formatRp(res.data.total_beban);
+
+                // Set Laba Bersih
+                let laba = res.data.laba_bersih;
+                document.getElementById('labaSebelum').innerText = formatRp(laba);
+                
+                // Pajak saat ini di-hardcode ke 0, Laba Setelah = Laba Sebelum
+                document.getElementById('labaSetelah').innerText = formatRp(laba);
+                
+                // Mengubah warna teks menjadi merah jika rugi (mines)
+                if(laba < 0) {
+                    document.getElementById('labaSetelah').classList.replace('text-primary', 'text-danger');
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

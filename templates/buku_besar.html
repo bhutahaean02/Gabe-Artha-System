@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+
+{% block title %}Jurnal Umum - Koperasi{% endblock %}
+{% block page_title %}Buku Besar & Jurnal Umum{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fa-solid fa-filter me-2"></i>Filter Rentang Waktu</h6>
+            <button class="btn btn-warning btn-sm fw-bold shadow-sm" onclick="syncDataManual()"><i class="fa-solid fa-wand-magic-sparkles me-1"></i> Sinkronkan Data dari MySQL</button>
+        </div>
+    </div>
+    <div class="card-body bg-light">
+        <form id="filterForm" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary">Pilih Rentang</label>
+                <select id="presetFilter" class="form-select border-primary">
+                    <option value="all">Semua Waktu</option>
+                    <option value="today">Hari Ini (Harian)</option>
+                    <option value="this_week">Minggu Ini (Mingguan)</option>
+                    <option value="this_month">Bulan Ini (Bulanan)</option>
+                    <option value="this_year">Tahun Ini (Tahunan)</option>
+                    <option value="custom">Pilih Tanggal Manual</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary">Tanggal Awal</label>
+                <input type="date" id="startDate" name="start_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary">Tanggal Akhir</label>
+                <input type="date" id="endDate" name="end_date" class="form-control" disabled>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Pilih Akun (Buku Besar)</label>
+                <select id="coaFilter" name="account_code" class="form-select border-primary">
+                    <option value="">Semua Akun (Jurnal Umum)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-search me-1"></i> Terapkan Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle table-sm m-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-3">Tanggal</th>
+                        <th>Kode Akun</th>
+                        <th>Nama Akun</th>
+                        <th>Keterangan</th>
+                        <th class="text-end">Debit</th>
+                        <th class="text-end pe-3">Kredit</th>
+                    </tr>
+                </thead>
+                <tbody id="tableJurnal">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data jurnal...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        const presetFilter = document.getElementById('presetFilter');
+        const startDate = document.getElementById('startDate');
+        const endDate = document.getElementById('endDate');
+        const form = document.getElementById('filterForm');
+        const coaFilter = document.getElementById('coaFilter');
+
+        // Memuat Daftar COA untuk Dropdown Buku Besar
+        fetch('/api/coa_all').then(res => res.json()).then(res => {
+            if(res.status === 'success') {
+                res.data.forEach(coa => {
+                    coaFilter.innerHTML += `<option value="${coa.account_code}">[${coa.account_code}] ${coa.account_name}</option>`;
+                });
+            }
+        });
+
+        // Mengatur opsi tanggal otomatis dari Javascript ketika filter dipilih
+        presetFilter.addEventListener('change', function() {
+            const val = this.value;
+            const today = new Date();
+            const formatDate = (d) => d.toISOString().split('T')[0];
+
+            if (val === 'custom') {
+                startDate.disabled = false;
+                endDate.disabled = false;
+            } else {
+                startDate.disabled = true;
+                endDate.disabled = true;
+                
+                if (val === 'today') {
+                    startDate.value = formatDate(today);
+                    endDate.value = formatDate(today);
+                } else if (val === 'this_week') {
+                    const firstDay = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+                    const lastDay = new Date(today.setDate(today.getDate() - today.getDay() + 7));
+                    startDate.value = formatDate(firstDay);
+                    endDate.value = formatDate(lastDay);
+                } else if (val === 'this_month') {
+                    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    startDate.value = formatDate(firstDay);
+                    endDate.value = formatDate(lastDay);
+                } else if (val === 'this_year') {
+                    const firstDay = new Date(today.getFullYear(), 0, 1);
+                    const lastDay = new Date(today.getFullYear(), 11, 31);
+                    startDate.value = formatDate(firstDay);
+                    endDate.value = formatDate(lastDay);
+                } else {
+                    startDate.value = '';
+                    endDate.value = '';
+                }
+            }
+        });
+
+        // Menarik data Jurnal Umum dari backend Python (API)
+        function loadJurnal(start = '', end = '', accCode = '') {
+            const tbody = document.getElementById('tableJurnal');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat...</td></tr>';
+            
+            let url = '/api/jurnal';
+            if (accCode) url += `?account_code=${accCode}`;
+            if (start && end) url += `?start_date=${start}&end_date=${end}`;
+
+            fetch(url).then(res => res.json()).then(res => {
+                tbody.innerHTML = '';
+                if(res.data && res.data.length > 0) {
+                    res.data.forEach(row => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="ps-3">${row.tanggal}</td>
+                                <td><span class="badge bg-secondary">${row.account_code}</span></td>
+                                <td>${row.account_name}</td>
+                                <td>${row.keterangan}</td>
+                                <td class="text-end text-danger">${row.debit > 0 ? 'Rp ' + row.debit.toLocaleString('id-ID') : '-'}</td>
+                                <td class="text-end text-success pe-3">${row.kredit > 0 ? 'Rp ' + row.kredit.toLocaleString('id-ID') : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data transaksi pada rentang waktu ini.</td></tr>';
+                }
+            }).catch(err => console.error(err));
+        }
+
+        // Menjalankan filter saat ditekan tombol Terapkan Filter
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadJurnal(startDate.value, endDate.value, coaFilter.value);
+        });
+
+        // Memuat pertama kali (Mode Semua Waktu)
+        loadJurnal();
+    });
+    
+    // Fungsi Eksekusi Sync Tombol Ajaib
+    function syncDataManual() {
+        if(confirm("Apakah Anda yakin ingin menyinkronkan data yang diinput manual via MySQL ke dalam Laporan Keuangan?")) {
+            const btn = document.querySelector('button[onclick="syncDataManual()"]');
+            const oriText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyinkronkan...';
+            btn.disabled = true;
+
+            fetch('/api/sync_jurnal_import', { method: 'POST' })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    alert(res.message);
+                    window.location.reload();
+                } else { alert("Gagal: " + res.message); }
+            })
+            .finally(() => {
+                btn.innerHTML = oriText;
+                btn.disabled = false;
+            });
+        }
+    }
+</script>
+{% endblock %}

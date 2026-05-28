@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Harian - Koperasi{% endblock %}
+{% block page_title %}Laporan Harian Cabang{% endblock %}
+
+{% block content %}
+<!-- Panel Kontrol (Tidak akan ikut terprint) -->
+<div class="card shadow border-0 mb-3">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <label class="fw-bold mb-0">Pilih Tanggal:</label>
+            <input type="date" id="inputTanggal" class="form-control form-control-sm" style="width:150px;">
+            <button class="btn btn-sm btn-primary" onclick="loadLaporan()"><i class="fa-solid fa-search"></i> Tampilkan</button>
+        </div>
+        <div>
+            <button class="btn btn-sm btn-danger shadow-sm" onclick="cetakPDF()"><i class="fa-solid fa-file-pdf me-1"></i> Cetak PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- Area Laporan Harian -->
+<div class="card shadow border-0">
+    <div class="card-body">
+        <div class="text-center mb-4 border-bottom pb-2">
+            <h4 class="fw-bold m-0 text-uppercase">LAPORAN HARIAN OPERASIONAL CABANG</h4>
+            <h6 class="text-secondary mt-1">Periode Tanggal: <span id="lblTanggal" class="text-dark fw-bold">-</span></h6>
+        </div>
+
+        <!-- 1. Pencairan -->
+        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-hand-holding-dollar me-1"></i> 1. Rincian Pencairan</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-bordered table-striped align-middle">
+                <thead class="table-dark text-center">
+                    <tr><th>No Anggota</th><th>Nama Anggota</th><th>Jenis Pinjaman</th><th>Nominal Plafon</th><th>Terima Bersih</th></tr>
+                </thead>
+                <tbody id="tbodyPencairan"></tbody>
+            </table>
+        </div>
+
+        <!-- 2. Angsuran -->
+        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-calendar-check me-1"></i> 2. Tagihan Jatuh Tempo (Kolektibilitas Hari Ini)</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-bordered table-striped align-middle">
+                <thead class="table-dark text-center">
+                    <tr><th>No Anggota</th><th>Nama Anggota</th><th>Jenis Pinjaman</th><th>Angsuran Ke</th><th>Total Tagihan</th><th>Status Pembayaran</th></tr>
+                </thead>
+                <tbody id="tbodyAngsuran"></tbody>
+            </table>
+        </div>
+
+        <!-- 3. Arus Kas -->
+        <h6 class="fw-bold text-primary mb-2"><i class="fa-solid fa-money-bill-transfer me-1"></i> 3. Arus Kas (Cash Flow)</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-bordered table-striped align-middle">
+                <thead class="table-dark text-center">
+                    <tr><th>Akun Terlibat</th><th>Keterangan Transaksi</th><th>Kas Masuk (Debit)</th><th>Kas Keluar (Kredit)</th></tr>
+                </thead>
+                <tbody id="tbodyCashflow"></tbody>
+            </table>
+        </div>
+
+        <!-- 4. Macet 1-6 Bulan -->
+        <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> 4. Penanganan Anggota Macet (1 - 6 Bulan)</h6>
+        <div class="table-responsive mb-4">
+            <table class="table table-sm table-bordered align-middle">
+                <thead class="table-dark text-center">
+                    <tr><th>No Anggota</th><th>Nama Anggota</th><th>OD Hari</th><th>Sisa Tagihan</th><th>Progres Marketing</th><th>Solusi</th><th>Aksi</th></tr>
+                </thead>
+                <tbody id="tbodyMacet1"></tbody>
+            </table>
+        </div>
+
+        <!-- 5. Macet >6 Bulan -->
+        <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-skull-crossbones me-1"></i> 5. Penanganan Anggota Macet (> 6 Bulan)</h6>
+        <div class="table-responsive mb-2">
+            <table class="table table-sm table-bordered align-middle">
+                <thead class="table-dark text-center">
+                    <tr><th>No Anggota</th><th>Nama Anggota</th><th>OD Hari</th><th>Sisa Tagihan</th><th>Progres Marketing</th><th>Solusi</th><th>Aksi</th></tr>
+                </thead>
+                <tbody id="tbodyMacet2"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Update Penanganan Macet -->
+<div class="modal fade" id="modalMacet" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold">Update Penanganan Macet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formUpdateMacet">
+                <div class="modal-body bg-light">
+                    <input type="hidden" id="macetNoAnggota">
+                    <p class="mb-3 text-muted">Anggota: <strong id="macetNama" class="text-dark"></strong></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Progres Marketing Lapangan</label>
+                        <textarea id="macetProgres" class="form-control" rows="3" placeholder="Contoh: Sudah dikunjungi, janji bayar minggu depan..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Solusi / Rekomendasi</label>
+                        <textarea id="macetSolusi" class="form-control" rows="2" placeholder="Contoh: Reschedule, Potong simpanan..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-save me-1"></i> Simpan Catatan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function formatRp(angka) { return (angka) ? 'Rp ' + Number(angka).toLocaleString('id-ID') : 'Rp 0'; }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('inputTanggal').value = today;
+        loadLaporan();
+    });
+
+    function loadLaporan() {
+        const tgl = document.getElementById('inputTanggal').value;
+        document.getElementById('lblTanggal').innerText = tgl.split('-').reverse().join('-');
+
+        // Setup loaders
+        const loaders = ['tbodyPencairan', 'tbodyAngsuran', 'tbodyCashflow', 'tbodyMacet1', 'tbodyMacet2'];
+        loaders.forEach(id => document.getElementById(id).innerHTML = `<tr><td colspan="7" class="text-center text-muted">Memuat data...</td></tr>`);
+
+        fetch(`/api/laporan_harian?tanggal=${tgl}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    const d = res.data;
+                    
+                    // 1. Render Pencairan
+                    let hPencairan = '';
+                    d.pencairan.forEach(r => {
+                        hPencairan += `<tr><td class="text-center">${r.no_anggota}</td><td>${r.nama_anggota}</td><td>${r.jenis}</td>
+                            <td class="text-end">${formatRp(r.nominal)}</td><td class="text-end">${formatRp(r.terima_bersih)}</td></tr>`;
+                    });
+                    document.getElementById('tbodyPencairan').innerHTML = hPencairan || `<tr><td colspan="5" class="text-center text-muted">Tidak ada data pencairan.</td></tr>`;
+
+                    // 2. Render Angsuran
+                    let hAngsuran = '';
+                    d.angsuran.forEach(r => {
+                        let badge = r.status === 'LUNAS' ? '<span class="badge bg-success"><i class="fa-solid fa-check"></i> LUNAS</span>' : '<span class="badge bg-danger">BELUM BAYAR</span>';
+                        hAngsuran += `<tr><td class="text-center">${r.no_anggota}</td><td>${r.nama_anggota}</td><td class="text-center">${r.jenis}</td><td class="text-center">${r.angsuran_ke}</td>
+                            <td class="text-end fw-bold">${formatRp(r.total_tagihan)}</td><td class="text-center">${badge}</td></tr>`;
+                    });
+                    document.getElementById('tbodyAngsuran').innerHTML = hAngsuran || `<tr><td colspan="6" class="text-center text-muted">Tidak ada tagihan jatuh tempo hari ini.</td></tr>`;
+
+                    // 3. Render Cash Flow
+                    let hCash = '';
+                    d.cashflow.forEach(r => {
+                        hCash += `<tr><td><span class="badge bg-secondary">${r.account_name}</span></td><td>${r.keterangan}</td>
+                            <td class="text-end text-success">${r.kas_masuk > 0 ? formatRp(r.kas_masuk) : '-'}</td>
+                            <td class="text-end text-danger">${r.kas_keluar > 0 ? formatRp(r.kas_keluar) : '-'}</td></tr>`;
+                    });
+                    document.getElementById('tbodyCashflow').innerHTML = hCash || `<tr><td colspan="4" class="text-center text-muted">Tidak ada pergerakan kas.</td></tr>`;
+
+                    // 4 & 5. Render Macet Function
+                    const renderMacet = (dataArray, tbodyId) => {
+                        let html = '';
+                        dataArray.forEach(r => {
+                            const prog = r.progres_marketing || '<i class="text-muted">Belum ada catatan</i>';
+                            const sol = r.solusi || '<i class="text-muted">Belum ada catatan</i>';
+                            html += `<tr>
+                                <td class="text-center">${r.no_anggota}</td>
+                                <td class="fw-bold">${r.nama_anggota}</td>
+                                <td class="text-center text-danger fw-bold">${r.od_hari} hr</td>
+                                <td class="text-end text-danger">${formatRp(r.tagihan)}</td>
+                                <td class="small">${prog}</td>
+                                <td class="small">${sol}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="bukaModalMacet('${r.no_anggota}', '${r.nama_anggota}', \`${r.progres_marketing || ''}\`, \`${r.solusi || ''}\`)">
+                                        <i class="fa-solid fa-pen"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>`;
+                        });
+                        document.getElementById(tbodyId).innerHTML = html || `<tr><td colspan="7" class="text-center text-success">Tidak ada anggota macet dalam kategori ini.</td></tr>`;
+                    };
+
+                    renderMacet(d.macet_1_6, 'tbodyMacet1');
+                    renderMacet(d.macet_lebih_6, 'tbodyMacet2');
+
+                } else {
+                    alert('Gagal memuat laporan: ' + res.message);
+                }
+            }).catch(e => alert("Terjadi kesalahan server: " + e));
+    }
+
+    // Fungsi Buka Modal Catatan Macet
+    function bukaModalMacet(no_anggota, nama, progres, solusi) {
+        document.getElementById('macetNoAnggota').value = no_anggota;
+        document.getElementById('macetNama').innerText = nama;
+        document.getElementById('macetProgres').value = progres !== 'null' ? progres : '';
+        document.getElementById('macetSolusi').value = solusi !== 'null' ? solusi : '';
+        new bootstrap.Modal(document.getElementById('modalMacet')).show();
+    }
+
+    // Submit Catatan Macet
+    document.getElementById('formUpdateMacet').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const payload = {
+            no_anggota: document.getElementById('macetNoAnggota').value,
+            progres_marketing: document.getElementById('macetProgres').value,
+            solusi: document.getElementById('macetSolusi').value
+        };
+
+        fetch('/api/update_penanganan_macet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                bootstrap.Modal.getInstance(document.getElementById('modalMacet')).hide();
+                loadLaporan(); // Reload table
+            } else {
+                alert('Gagal menyimpan: ' + res.message);
+            }
+        });
+    });
+
+    function cetakPDF() {
+        const tgl = document.getElementById('inputTanggal').value;
+        window.open(`/api/cetak_laporan_harian_pdf?tanggal=${tgl}`, '_blank');
+    }
+</script>
+{% endblock %}

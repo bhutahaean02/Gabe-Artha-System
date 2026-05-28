@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Approval Transaksi - Koperasi{% endblock %}
+{% block page_title %}Antrean Approval Manager{% endblock %}
+
+{% block content %}
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-0 border-bottom-0 d-flex justify-content-between align-items-center">
+        <ul class="nav nav-tabs border-bottom-0" id="approvalTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab"><i class="fa-solid fa-list-check me-1"></i> Menunggu Persetujuan</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-secondary" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab"><i class="fa-solid fa-clock-rotate-left me-1"></i> Riwayat Approval</button>
+            </li>
+        </ul>
+        <button class="btn btn-sm btn-outline-secondary fw-bold mb-2 shadow-sm" onclick="loadQueue()"><i class="fa-solid fa-rotate-right me-1"></i> Refresh</button>
+    </div>
+    <div class="card-body bg-light p-0">
+        <div class="tab-content">
+            <!-- Tab Pending -->
+            <div class="tab-pane fade show active" id="pending-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">ID Antrean</th>
+                                <th>Tgl Pengajuan</th>
+                                <th>Diajukan Oleh</th>
+                                <th>Jenis Transaksi</th>
+                                <th class="text-center">Aksi / Keputusan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableApproval"><tr><td colspan="5" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat antrean...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Tab Riwayat -->
+            <div class="tab-pane fade" id="history-pane" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">ID Antrean</th>
+                                <th>Tgl Pengajuan</th>
+                                <th>Diajukan Oleh</th>
+                                <th>Jenis Transaksi</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableHistory"><tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat riwayat...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Data Payload -->
+<div class="modal fade" id="modalPayload" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-magnifying-glass me-2"></i> Detail Data Pengajuan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="alert alert-info border-0 shadow-sm mb-3">
+                    <i class="fa-solid fa-circle-info me-1"></i> Periksa rincian variabel transaksi ini sebelum Anda memutuskan untuk menyetujuinya.
+                </div>
+                <div class="table-responsive bg-white border rounded">
+                    <table class="table table-sm table-striped m-0">
+                        <tbody id="detailDataPayload"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let queueData = {};
+    const ENDPOINTS = {
+        'Pencairan Multiguna': '/api/pencairan_multiguna',
+        'Pencairan Dana Urgent': '/api/pencairan_urgent',
+        'Pembayaran Angsuran': '/api/bayar_angsuran',
+        'Penarikan Simpanan': '/api/penarikan_simpanan'
+    };
+
+    function loadQueue() {
+        document.getElementById('tableApproval').innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat antrean...</td></tr>';
+        document.getElementById('tableHistory').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat riwayat...</td></tr>';
+        
+        fetch('/api/approval_queue').then(r=>r.json()).then(res => {
+            const tbody = document.getElementById('tableApproval');
+            const tbodyHistory = document.getElementById('tableHistory');
+            tbody.innerHTML = '';
+            tbodyHistory.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                res.data.forEach(row => {
+                    queueData[row.id] = row;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3"><span class="badge bg-secondary">REQ-${row.id}</span></td>
+                            <td>${row.tanggal_pengajuan}</td>
+                            <td><i class="fa-solid fa-user-circle me-1 text-primary"></i> ${row.diajukan_oleh}</td>
+                            <td class="fw-bold">${row.tipe_transaksi}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-info text-white me-1" onclick="lihatDetail(${row.id})" title="Periksa Data"><i class="fa-solid fa-search"></i> Detail</button>
+                                <button class="btn btn-sm btn-success me-1" onclick="prosesApproval(${row.id}, 'approve')" title="Setujui dan Proses"><i class="fa-solid fa-check"></i> Setujui</button>
+                                <button class="btn btn-sm btn-danger" onclick="prosesApproval(${row.id}, 'reject')" title="Tolak"><i class="fa-solid fa-xmark"></i> Tolak</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-success fw-bold"><i class="fa-solid fa-check-circle fa-2x mb-2 d-block"></i> Semua Aman! Tidak ada antrean pengajuan baru.</td></tr>'; }
+            
+            // Render Tab Riwayat
+            if(res.history && res.history.length > 0) {
+                res.history.forEach(row => {
+                    queueData[row.id] = row;
+                    let badgeStatus = row.status === 'APPROVED' ? 'bg-success' : 'bg-danger';
+                    let iconStatus = row.status === 'APPROVED' ? 'check' : 'xmark';
+                    tbodyHistory.innerHTML += `
+                        <tr>
+                            <td class="ps-3"><span class="badge bg-secondary">REQ-${row.id}</span></td>
+                            <td>${row.tanggal_pengajuan}</td>
+                            <td><i class="fa-solid fa-user-circle me-1 text-primary"></i> ${row.diajukan_oleh}</td>
+                            <td class="fw-bold">${row.tipe_transaksi}</td>
+                            <td class="text-center"><span class="badge ${badgeStatus}"><i class="fa-solid fa-${iconStatus} me-1"></i> ${row.status}</span></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-info text-white" onclick="lihatDetail(${row.id})" title="Periksa Data"><i class="fa-solid fa-search"></i> Detail</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else { tbodyHistory.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Belum ada riwayat persetujuan.</td></tr>'; }
+        });
+    }
+
+    function lihatDetail(id) {
+        const payload = JSON.parse(queueData[id].data_payload);
+        let html = '';
+        for(let key in payload) html += `<tr><th width="40%" class="text-uppercase text-secondary">${key.replace(/_/g, ' ')}</th><td class="fw-medium">${payload[key] || '-'}</td></tr>`;
+        document.getElementById('detailDataPayload').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('modalPayload')).show();
+    }
+
+    function prosesApproval(id, action) {
+        const d = queueData[id];
+        if(action === 'reject') {
+            if(confirm('Yakin ingin menolak transaksi ini?')) { fetch('/api/approval_reject', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id: id}) }).then(r=>r.json()).then(res => { alert(res.message); loadQueue(); }); }
+            return;
+        }
+        if(confirm('Yakin ingin menyetujui transaksi ini? Data akan segera masuk dan diproses di sistem.')) {
+            let payload = JSON.parse(d.data_payload);
+            payload.is_approval_execution = true; payload.approval_id = id;
+            fetch(ENDPOINTS[d.tipe_transaksi], { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).then(res => {
+                if(res.status === 'success') { alert('Transaksi Berhasil Disetujui & Masuk Sistem Utama!'); loadQueue(); } else { alert('Gagal: ' + res.message); }
+            });
+        }
+    }
+    document.addEventListener('DOMContentLoaded', loadQueue);
+</script>
+{% endblock %}

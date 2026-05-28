@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}Kondisi Aset - Koperasi{% endblock %}
+{% block page_title %}Manajemen Kondisi Aset Operasional{% endblock %}
+
+{% block content %}
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-primary"><i class="fa-solid fa-boxes-stacked me-2"></i> Daftar Aset Cabang</h5>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAset">
+            <i class="fa-solid fa-plus me-1"></i> Tambah Aset
+        </button>
+    </div>
+    
+    <div class="card-body bg-light p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID Aset</th>
+                        <th>Nama Aset</th>
+                        <th>Lokasi / Cabang</th>
+                        <th>Tgl Perolehan</th>
+                        <th>Kondisi Terkini</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableAset">
+                    <!-- Data dimuat via API nantinya -->
+                    <tr><td colspan="6" class="text-center text-muted">Belum ada data aset tercatat.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tambah Aset -->
+<div class="modal fade" id="modalAset" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-laptop me-2"></i> Input Aset Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAset">
+                <div class="modal-body bg-light">
+                    <div id="alertBox"></div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama / Deskripsi Aset *</label>
+                        <input type="text" name="nama_aset" class="form-control" placeholder="Contoh: Komputer Lenovo Kasir 1" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Lokasi / Cabang</label>
+                            <select name="lokasi_cabang" class="form-select">
+                                <option value="GAS">Pusat (GAS)</option>
+                                <option value="CBG1">Cabang 1</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Tanggal Perolehan</label>
+                            <input type="date" name="tanggal_perolehan" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nilai Perolehan Aset (Rp)</label>
+                        <input type="number" name="nilai_aset" class="form-control" placeholder="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kondisi Saat Ini *</label>
+                        <select name="kondisi" class="form-select border-primary fw-bold" required>
+                            <option value="BAIK">✅ Baik / Layak Pakai</option>
+                            <option value="RUSAK RINGAN">⚠️ Rusak Ringan</option>
+                            <option value="RUSAK BERAT">❌ Rusak Berat</option>
+                            <option value="HILANG">❓ Hilang</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Keterangan / Catatan</label>
+                        <textarea name="keterangan" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" id="btnSimpanAset" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Aset -->
+<div class="modal fade" id="modalEditAset" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark fw-bold"><i class="fa-solid fa-wrench me-2"></i> Update Kondisi Aset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditAset">
+                <div class="modal-body bg-light">
+                    <div id="alertBoxEdit"></div>
+                    <input type="hidden" name="id" id="editIdAset">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Aset</label>
+                        <input type="text" id="editNamaAset" class="form-control bg-white fw-bold text-secondary" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kondisi Saat Ini *</label>
+                        <select name="kondisi" id="editKondisi" class="form-select border-warning fw-bold" required>
+                            <option value="BAIK">✅ Baik / Layak Pakai</option>
+                            <option value="RUSAK RINGAN">⚠️ Rusak Ringan</option>
+                            <option value="RUSAK BERAT">❌ Rusak Berat</option>
+                            <option value="HILANG">❓ Hilang</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Keterangan / Laporan Kerusakan</label>
+                        <textarea name="keterangan" id="editKeterangan" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" id="btnUpdateAset" class="btn btn-warning fw-bold"><i class="fa-solid fa-save"></i> Update Aset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let asetData = []; // Variabel global untuk menyimpan data array aset
+
+    // 1. Memuat Daftar Aset secara otomatis
+    function loadAset() {
+        fetch('/api/aset')
+        .then(res => res.json())
+        .then(res => {
+            const tbody = document.getElementById('tableAset');
+            tbody.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                asetData = res.data; // Simpan data ke variabel global
+                res.data.forEach(row => {
+                    // Pemberian warna berdasarkan kondisi
+                    let badgeClass = 'bg-secondary';
+                    if(row.kondisi === 'BAIK') badgeClass = 'bg-success';
+                    else if(row.kondisi === 'RUSAK RINGAN') badgeClass = 'bg-warning text-dark';
+                    else if(row.kondisi === 'RUSAK BERAT') badgeClass = 'bg-danger';
+                    
+                    let harga = row.nilai_aset ? 'Rp ' + Number(row.nilai_aset).toLocaleString('id-ID') : '-';
+                    
+                    tbody.innerHTML += `<tr>
+                        <td><span class="badge bg-primary">AST-${row.id}</span></td>
+                        <td class="fw-bold">${row.nama_aset} <br><small class="text-muted fw-normal">${harga}</small></td>
+                        <td>${row.lokasi_cabang}</td>
+                        <td>${row.tanggal_perolehan || '-'}</td>
+                        <td><span class="badge ${badgeClass}">${row.kondisi}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-info text-white" title="Detail Aset"><i class="fa-solid fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning text-white" title="Ubah Kondisi / Service" onclick="bukaModalEdit(${row.id})"><i class="fa-solid fa-wrench"></i></button>
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">Belum ada data inventaris aset tercatat.</td></tr>';
+            }
+        }).catch(err => console.error(err));
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAset);
+
+    // 2. Submit Aset Baru ke Backend
+    document.getElementById('formAset').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSimpanAset');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+        
+        const payload = Object.fromEntries(new FormData(this).entries());
+        
+        fetch('/api/aset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                document.getElementById('alertBox').innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-check-circle me-1"></i> ${res.message}</div>`;
+                this.reset();
+                loadAset();
+            } else {
+                document.getElementById('alertBox').innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
+            }
+        }).finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Data';
+        });
+    });
+
+    // 3. Fungsi Membuka Modal Edit Aset
+    function bukaModalEdit(id) {
+        // Cari data aset dari variabel global berdasarkan ID
+        const aset = asetData.find(a => a.id === id);
+        if(aset) {
+            document.getElementById('editIdAset').value = aset.id;
+            document.getElementById('editNamaAset').value = aset.nama_aset;
+            document.getElementById('editKondisi').value = aset.kondisi;
+            document.getElementById('editKeterangan').value = aset.keterangan || '';
+            
+            // Tampilkan Modal Bootstrap
+            new bootstrap.Modal(document.getElementById('modalEditAset')).show();
+        }
+    }
+
+    // 4. Submit Update Kondisi ke Backend
+    document.getElementById('formEditAset').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnUpdateAset');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating...';
+        
+        const payload = Object.fromEntries(new FormData(this).entries());
+        
+        fetch('/api/aset', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(res => res.json()).then(res => {
+            if(res.status === 'success') {
+                bootstrap.Modal.getInstance(document.getElementById('modalEditAset')).hide();
+                loadAset(); // Refresh tabel data
+            } else {
+                document.getElementById('alertBoxEdit').innerHTML = `<div class="alert alert-danger">${res.message}</div>`;
+            }
+        }).finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Update Aset'; });
+    });
+</script>
+{% endblock %}

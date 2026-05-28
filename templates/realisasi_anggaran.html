@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Realisasi Anggaran - Koperasi{% endblock %}
+{% block page_title %}RAB & Realisasi Anggaran Operasional{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary fw-bold"><i class="fa-solid fa-bullseye me-2"></i> Realisasi Biaya Bulanan</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="month" id="filterBulan" class="form-control form-control-sm shadow-sm" style="width: 150px;">
+                    <button class="btn btn-primary btn-sm shadow-sm" onclick="loadRealisasi()"><i class="fa-solid fa-search"></i></button>
+                </div>
+            </div>
+            <div class="card-body bg-light p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">Akun Biaya</th>
+                                <th class="text-end">Anggaran (RAB)</th>
+                                <th class="text-end">Realisasi Aktual</th>
+                                <th width="25%" class="text-center">Indikator Pemakaian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableRealisasi">
+                            <tr><td colspan="4" class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat...</td></tr>
+                        </tbody>
+                        <tfoot id="tfootRealisasi" class="table-light fw-bold border-top-2" style="display: none;">
+                            <tr>
+                                <td class="text-end text-uppercase text-secondary">Total Keseluruhan:</td>
+                                <td class="text-end text-primary fs-6" id="valTotalAnggaran">Rp 0</td>
+                                <td class="text-end text-success fs-6" id="valTotalRealisasi">Rp 0</td>
+                                <td class="text-center align-middle" id="valPersentaseTotal">0%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 border-top border-4 border-warning h-100">
+            <div class="card-header bg-white pt-3 pb-2">
+                <h6 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-wrench me-2"></i> Seting Plafon Anggaran</h6>
+            </div>
+            <div class="card-body bg-white p-3">
+                <div class="alert alert-info small py-2 mb-3 border-0">
+                    <i class="fa-solid fa-circle-info me-1"></i> Atur batas maksimal pengeluaran (RAB) tiap bulannya untuk mengontrol kebocoran kas.
+                </div>
+                <form id="formAnggaran">
+                    <div id="alertBox"></div>
+                    <div style="max-height: 400px; overflow-y: auto; overflow-x: hidden;" class="pe-2">
+                        <table class="table table-borderless table-sm m-0">
+                            <tbody id="tableSetingAnggaran">
+                                <!-- Generate via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2 text-end fw-bold px-2 py-1 bg-light border rounded text-secondary small">
+                        Total Seting RAB: <span id="valTotalSetingRAB" class="text-dark fs-6">Rp 0</span>
+                    </div>
+                    <div class="text-end mt-3 border-top pt-3">
+                        <button type="submit" id="btnSimpanRAB" class="btn btn-warning fw-bold text-dark w-100"><i class="fa-solid fa-save me-1"></i> Simpan Seting Anggaran</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function formatRp(angka) { return 'Rp ' + Number(angka).toLocaleString('id-ID'); }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const now = new Date();
+        document.getElementById('filterBulan').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+        loadRealisasi();
+    });
+
+    function loadRealisasi() {
+        const bulan = document.getElementById('filterBulan').value;
+        fetch(`/api/realisasi_anggaran?bulan=${bulan}`)
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                const tbody = document.getElementById('tableRealisasi');
+                const tbodySeting = document.getElementById('tableSetingAnggaran');
+                tbody.innerHTML = ''; tbodySeting.innerHTML = '';
+
+                let totalAnggaran = 0;
+                let totalRealisasi = 0;
+
+                res.data.forEach((row, index) => {
+                    let anggaran = Number(row.anggaran_bulanan);
+                    let realisasi = Number(row.realisasi);
+                    
+                    totalAnggaran += anggaran;
+                    totalRealisasi += realisasi;
+                    let persentase = anggaran > 0 ? Math.round((realisasi / anggaran) * 100) : (realisasi > 0 ? 100 : 0);
+                    
+                    let barColor = 'bg-success';
+                    let statusText = 'Aman';
+                    if(persentase > 75 && persentase <= 100) { barColor = 'bg-warning text-dark'; statusText = 'Mendekati Limit'; }
+                    if(persentase > 100) { barColor = 'bg-danger'; statusText = 'OVERBUDGET (Bocor)'; persentase = 100; }
+
+                    // Baris Tabel Realisasi Kiri
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3 fw-medium"><span class="badge bg-secondary me-1">${row.account_code}</span> ${row.account_name}</td>
+                            <td class="text-end text-primary">${formatRp(anggaran)}</td>
+                            <td class="text-end fw-bold ${realisasi > anggaran ? 'text-danger' : 'text-success'}">${formatRp(realisasi)}</td>
+                            <td class="text-center align-middle pe-3">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-bold ${realisasi > anggaran ? 'text-danger' : ''}">${statusText}</span>
+                                    <span>${anggaran > 0 ? Math.round((realisasi / anggaran) * 100) : 0}%</span>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar ${barColor} progress-bar-striped" style="width: ${persentase}%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+
+                    // Baris Tabel Input Seting Kanan
+                    tbodySeting.innerHTML += `
+                        <tr>
+                            <td class="align-middle small fw-medium" width="50%">${row.account_name}</td>
+                            <td>
+                                <input type="hidden" name="id_${index}" value="${row.id}">
+                                <input type="number" name="anggaran_${index}" class="form-control form-control-sm text-end" value="${anggaran}">
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Tampilkan Total Anggaran Keseluruhan
+                document.getElementById('tfootRealisasi').style.display = 'table-footer-group';
+                document.getElementById('valTotalAnggaran').innerText = formatRp(totalAnggaran);
+                document.getElementById('valTotalRealisasi').innerText = formatRp(totalRealisasi);
+                document.getElementById('valTotalSetingRAB').innerText = formatRp(totalAnggaran);
+
+                let persentaseTotal = totalAnggaran > 0 ? Math.round((totalRealisasi / totalAnggaran) * 100) : (totalRealisasi > 0 ? 100 : 0);
+                let tfootStatus = 'Aman'; let tfootClass = 'text-success';
+                if(persentaseTotal > 75 && persentaseTotal <= 100) { tfootClass = 'text-warning text-dark'; tfootStatus = 'Hati-hati'; }
+                if(persentaseTotal > 100) { tfootClass = 'text-danger'; tfootStatus = 'Bocor'; }
+                
+                document.getElementById('valPersentaseTotal').innerHTML = `<span class="${tfootClass}">${persentaseTotal}% (${tfootStatus})</span>`;
+            }
+        });
+    }
+
+    document.getElementById('formAnggaran').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSimpanRAB');
+        btn.disabled = true; btn.innerHTML = 'Menyimpan...';
+
+        let anggaranList = [];
+        const fd = new FormData(this);
+        for(let i=0; i<fd.keys().next().value; i++) { if(!fd.has(`id_${i}`)) break; anggaranList.push({ id: fd.get(`id_${i}`), anggaran_bulanan: fd.get(`anggaran_${i}`) }); }
+
+        fetch('/api/update_anggaran', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({anggaran_list: anggaranList}) })
+        .then(res => res.json()).then(res => {
+            if(res.status==='success') { loadRealisasi(); alert('Berhasil Diperbarui!'); }
+            else { alert('Gagal: ' + res.message); }
+        }).finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save me-1"></i> Simpan Seting Anggaran'; });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Pencairan Multiguna - Koperasi{% endblock %}
+{% block page_title %}Pencairan Multiguna & Tempo{% endblock %}
+
+{% block content %}
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2">
+        <h5 class="mb-0 text-primary"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Form Pencairan Baru</h5>
+    </div>
+    
+    <div class="card-body">
+        <form id="formPencairan">
+            <div id="alertBox"></div>
+
+            <div class="row g-4">
+                <!-- Kolom Kiri: Data Peminjam & Pinjaman -->
+                <div class="col-lg-6">
+                    <h6 class="text-secondary border-bottom pb-2 mb-3">Data Peminjam</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Pilih Nomor Anggota *</label>
+                            <select name="no_anggota" id="selectAnggota" class="form-select" required>
+                                <option value="" selected disabled>-- Sedang Memuat Data --</option>
+                            </select>
+                            <button type="button" class="btn btn-warning btn-sm mt-2 w-100" id="btnCekTopup">
+                                <i class="fa-solid fa-search-dollar"></i> Cek Sisa Hutang (Top-Up)
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Nama Anggota</label>
+                            <input type="text" name="nama_anggota" id="inputNamaAnggota" class="form-control bg-light" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Jenis Pencairan</label>
+                            <select name="jenis_pencairan" class="form-select">
+                                <option value="Multiguna">Multiguna</option>
+                                <option value="Tempo">Tempo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6"></div> <!-- Empty space -->
+
+                        <!-- Area Info Top-Up -->
+                        <div class="col-md-12">
+                            <div id="infoTopup" class="alert alert-warning mb-0" style="display: none;">
+                                <h6 class="fw-bold mb-2"><i class="fa-solid fa-circle-info"></i> Rincian Hutang Lama (Top-Up)</h6>
+                                <div class="row text-dark small">
+                                    <div class="col-6">Sisa Pokok:</div><div class="col-6 text-end fw-bold" id="infoSisaPokok">Rp 0</div>
+                                    <div class="col-6">Sisa Margin:</div><div class="col-6 text-end fw-bold" id="infoSisaMargin">Rp 0</div>
+                                    <div class="col-6">Denda Berjalan:</div><div class="col-6 text-end fw-bold text-danger" id="infoSisaDenda">Rp 0</div>
+                                    <div class="col-12"><hr class="my-1 border-dark"></div>
+                                    <div class="col-6 fw-bold">Total Pelunasan:</div><div class="col-6 text-end fw-bold text-danger" id="infoTotalTopup">Rp 0</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-success mt-2 w-100 fw-bold shadow-sm" id="btnGunakanTopup">Gunakan Angka Ini ke Potongan Angsuran</button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tanggal Cair *</label>
+                            <input type="date" name="tanggal_cair" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tanggal Gajian *</label>
+                            <input type="date" name="tanggal_gajian" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-4">Ketetapan Pinjaman</h6>
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold text-success">Besar Pinjaman (Rp) *</label>
+                            <input type="number" name="besar_pinjaman" id="inputPlafon" class="form-control form-control-lg border-success fw-bold text-success calc-trigger" placeholder="Contoh: 10000000" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Tenor (Bulan) *</label>
+                            <input type="number" name="tenor" class="form-control" placeholder="Contoh: 12" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Bunga per Bulan (%) *</label>
+                            <input type="number" step="0.01" name="bunga_persen" class="form-control" placeholder="Contoh: 1.5" required>
+                            <small class="text-muted" style="font-size:11px;">Bunga Flat</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan: Rincian Potongan -->
+                <div class="col-lg-6">
+                    <div class="bg-light p-3 rounded border">
+                        <h6 class="text-danger border-bottom border-danger pb-2 mb-3"><i class="fa-solid fa-scissors me-1"></i> Potongan-potongan</h6>
+                        
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Potongan Angsuran</label></div>
+                            <div class="col-7"><input type="number" name="potongan_angsuran" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Potongan Dana Urgent</label></div>
+                            <div class="col-7"><input type="number" name="potongan_dana_urgent" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Biaya Jamsostek</label></div>
+                            <div class="col-7"><input type="number" name="biaya_jamsostek" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Potongan Simpanan Pokok</label></div>
+                            <div class="col-7"><input type="number" name="potongan_simpanan_pokok" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Potongan Administrasi</label></div>
+                            <div class="col-7"><input type="number" name="potongan_adm" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-2 align-items-center">
+                            <div class="col-5"><label class="small">Potongan Dana Kematian</label></div>
+                            <div class="col-7"><input type="number" name="potongan_dana_kematian" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+                        <div class="row g-2 mb-3 align-items-center">
+                            <div class="col-5"><label class="small">Potongan PPAP</label></div>
+                            <div class="col-7"><input type="number" name="potongan_ppap" class="form-control form-control-sm calc-trigger" value="0"></div>
+                        </div>
+
+                        <!-- TOTAL TERIMA BERSIH -->
+                        <div class="p-3 bg-white rounded border border-primary shadow-sm text-center">
+                            <label class="text-primary fw-bold text-uppercase mb-1">Total Terima Bersih</label>
+                            <input type="number" name="terima_bersih" id="inputTerimaBersih" class="form-control text-center fs-3 fw-bold bg-white text-primary border-0 p-0" readonly value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end border-top pt-3 mt-4">
+                <button type="submit" id="btnSubmit" class="btn btn-primary px-5 btn-lg shadow"><i class="fa-solid fa-paper-plane me-2"></i> Proses Pencairan</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Ambil Daftar Anggota saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/anggota_list')
+        .then(response => response.json())
+        .then(res => {
+            const select = document.getElementById('selectAnggota');
+            select.innerHTML = '<option value="" selected disabled>-- Pilih Nomor Anggota --</option>';
+            if(res.status === 'success') {
+                res.data.forEach(item => {
+                    // Simpan nama di dataset agar bisa dipanggil nanti
+                    select.innerHTML += `<option value="${item.no_anggota}" data-nama="${item.nama_anggota}">${item.no_anggota} - ${item.nama_anggota}</option>`;
+                });
+            }
+        });
+    });
+
+    // 2. Otomatis isi Nama Anggota ketika Nomor Anggota dipilih
+    document.getElementById('selectAnggota').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        document.getElementById('inputNamaAnggota').value = selectedOption.getAttribute('data-nama');
+    });
+
+    // 3. Kalkulator Otomatis "Terima Bersih"
+    const calcTriggers = document.querySelectorAll('.calc-trigger');
+    calcTriggers.forEach(input => {
+        input.addEventListener('input', kalkulasiTerimaBersih);
+    });
+
+    function kalkulasiTerimaBersih() {
+        let plafon = parseFloat(document.getElementById('inputPlafon').value) || 0;
+        
+        // Ambil semua potongan
+        let pot_angsuran = parseFloat(document.getElementsByName('potongan_angsuran')[0].value) || 0;
+        let pot_urgent = parseFloat(document.getElementsByName('potongan_dana_urgent')[0].value) || 0;
+        let jamsostek = parseFloat(document.getElementsByName('biaya_jamsostek')[0].value) || 0;
+        let pot_simpok = parseFloat(document.getElementsByName('potongan_simpanan_pokok')[0].value) || 0;
+        let pot_adm = parseFloat(document.getElementsByName('potongan_adm')[0].value) || 0;
+        let pot_kematian = parseFloat(document.getElementsByName('potongan_dana_kematian')[0].value) || 0;
+        let pot_ppap = parseFloat(document.getElementsByName('potongan_ppap')[0].value) || 0;
+
+        let total_potongan = pot_angsuran + pot_urgent + jamsostek + pot_simpok + pot_adm + pot_kematian + pot_ppap;
+        let bersih = plafon - total_potongan;
+        
+        document.getElementById('inputTerimaBersih').value = bersih;
+    }
+
+    // 3.5. Cek Sisa Tagihan untuk Top-Up
+    document.getElementById('btnCekTopup').addEventListener('click', function() {
+        const noAnggota = document.getElementById('selectAnggota').value;
+        if(!noAnggota) return alert('Pilih Nomor Anggota terlebih dahulu!');
+
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengecek...';
+        
+        fetch(`/api/cek_sisa_tagihan/${noAnggota}`)
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                const mg = res.data.multiguna;
+                if(mg.total_pelunasan > 0) {
+                    document.getElementById('infoTopup').style.display = 'block';
+                    document.getElementById('infoSisaPokok').innerText = 'Rp ' + mg.sisa_pokok.toLocaleString('id-ID');
+                    document.getElementById('infoSisaMargin').innerText = 'Rp ' + mg.sisa_margin.toLocaleString('id-ID');
+                    document.getElementById('infoSisaDenda').innerText = 'Rp ' + Math.round(mg.denda).toLocaleString('id-ID');
+                    document.getElementById('infoTotalTopup').innerText = 'Rp ' + Math.round(mg.total_pelunasan).toLocaleString('id-ID');
+                    document.getElementById('btnGunakanTopup').setAttribute('data-nominal', Math.round(mg.total_pelunasan));
+                } else {
+                    alert('Anggota ini tidak memiliki sisa hutang Multiguna/Tempo (Bebas Top-Up).');
+                    document.getElementById('infoTopup').style.display = 'none';
+                }
+            }
+        }).finally(() => { this.innerHTML = '<i class="fa-solid fa-search-dollar"></i> Cek Sisa Hutang (Top-Up)'; });
+    });
+
+    document.getElementById('btnGunakanTopup').addEventListener('click', function() {
+        document.getElementsByName('potongan_angsuran')[0].value = this.getAttribute('data-nominal');
+        kalkulasiTerimaBersih();
+        alert('Nominal pelunasan berhasil dimasukkan ke form Potongan Angsuran!');
+    });
+
+    // 4. Proses Submit Data
+    document.getElementById('formPencairan').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Sedang Memproses...';
+
+        const formData = new FormData(this);
+        const dataObj = Object.fromEntries(formData.entries());
+
+        fetch('/api/pencairan_multiguna', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dataObj)
+        })
+        .then(response => response.json())
+        .then(result => {
+            const alertBox = document.getElementById('alertBox');
+            if(result.status === 'success') {
+                alertBox.innerHTML = `<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check me-2"></i>${result.message} <button class="btn-close" data-bs-dismiss="alert"></button></div>`;
+                this.reset();
+                document.getElementById('inputTerimaBersih').value = '0';
+                window.scrollTo(0,0);
+            } else {
+                alertBox.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Gagal: ${result.message}</div>`;
+            }
+        })
+        .catch(err => {
+            document.getElementById('alertBox').innerHTML = `<div class="alert alert-danger">Terjadi kesalahan saat menghubungi server.</div>`;
+        })
+        .finally(() => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i> Proses Pencairan';
+        });
+    });
+</script>
+{% endblock %}
