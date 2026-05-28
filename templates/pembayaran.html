@@ -4,6 +4,10 @@
 {% block page_title %}Pembayaran Angsuran & Dana Urgent{% endblock %}
 
 {% block content %}
+<!-- Tambahkan CSS Select2 untuk Fitur Pencarian Dropdown -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
 <div class="card shadow border-0">
     <div class="card-header bg-white pt-3 pb-2">
         <h5 class="mb-0 text-success"><i class="fa-solid fa-cash-register me-2"></i> Form Kasir Pembayaran</h5>
@@ -13,13 +17,17 @@
         <div id="alertBox"></div>
 
         <div class="row mb-4 bg-light p-3 rounded border align-items-center">
-            <div class="col-md-6">
+            <div class="col-md-5">
                 <label class="form-label fw-bold">1. Pilih Anggota untuk Cek Tagihan *</label>
                 <select id="selectAnggota" class="form-select border-success shadow-sm">
                     <option value="" selected disabled>-- Memuat Data Anggota --</option>
                 </select>
             </div>
-            <div class="col-md-6 pt-3 pt-md-0 text-md-end text-muted small">
+            <div class="col-md-3 mt-3 mt-md-0">
+                <label class="form-label fw-bold text-primary">Tanggal Pembayaran</label>
+                <input type="date" id="inputTanggalBayar" class="form-control border-primary fw-bold text-primary" required>
+            </div>
+            <div class="col-md-4 pt-3 pt-md-0 text-md-end text-muted small">
                 <i class="fa-solid fa-circle-info me-1"></i> Menampilkan otomatis tagihan bulan terdekat yang belum dibayar.
             </div>
         </div>
@@ -83,7 +91,13 @@
                             </div>
 
                             <!-- 2. Bagian Input Kasir -->
-                            <h6 class="text-success mt-4 border-bottom pb-2 fw-bold"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
+                            <div class="d-flex justify-content-between align-items-center mt-4 border-bottom pb-2 mb-3">
+                                <h6 class="text-success fw-bold mb-0"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="checkMinusUtama" style="cursor:pointer;">
+                                    <label class="form-check-label fw-bold text-danger small" for="checkMinusUtama">Pembayaran Minus (Sebagian)</label>
+                                </div>
+                            </div>
                             <div class="row g-3 mb-3">
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Pokok (Rp)</label>
@@ -148,7 +162,13 @@
                             </div>
 
                             <!-- 2. Bagian Input Kasir (Urgent) -->
-                            <h6 class="text-success mt-4 border-bottom pb-2 fw-bold"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
+                            <div class="d-flex justify-content-between align-items-center mt-4 border-bottom pb-2 mb-3">
+                                <h6 class="text-success fw-bold mb-0"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="checkMinusUrgent" style="cursor:pointer;">
+                                    <label class="form-check-label fw-bold text-danger small" for="checkMinusUrgent">Pembayaran Minus (Sebagian)</label>
+                                </div>
+                            </div>
                             <div class="row g-3 mb-3">
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Pokok (Rp)</label>
@@ -209,6 +229,10 @@
     </div>
 </div>
 
+<!-- Tambahkan JS jQuery & Select2 -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
     // Fungsi bantuan untuk mengubah angka menjadi format Rupiah
     function formatRp(angka) {
@@ -217,6 +241,16 @@
 
     // Load Data Anggota
     document.addEventListener('DOMContentLoaded', function() {
+        let t = new Date();
+        document.getElementById('inputTanggalBayar').value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+        
+        // Recalculate secara real-time dari backend jika tanggal diubah
+        document.getElementById('inputTanggalBayar').addEventListener('change', function() {
+            if(document.getElementById('selectAnggota').value) {
+                document.getElementById('selectAnggota').dispatchEvent(new Event('change'));
+            }
+        });
+
         fetch('/api/anggota_list')
         .then(r => r.json())
         .then(res => {
@@ -224,6 +258,36 @@
             if(res.status === 'success') {
                 res.data.forEach(item => {
                     select.innerHTML += `<option value="${item.no_anggota}">${item.no_anggota} - ${item.nama_anggota}</option>`;
+                });
+            }
+            
+            // Inisialisasi Select2 agar dropdown anggota bisa diketik & dicari
+            if (typeof $ !== 'undefined' && $.fn.select2) {
+                select.options[0].text = ''; // Kosongkan text awal agar placeholder bekerja
+                $('#selectAnggota').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    placeholder: '-- Ketik Nama / No Anggota --'
+                }).on('select2:select', function(e) {
+                    this.dispatchEvent(new Event('change')); // Memicu proses cek tagihan otomatis
+                });
+            }
+
+            // Event listeners untuk mengunci/membuka input saat ceklis Minus diklik
+            if(document.getElementById('checkMinusUtama')) {
+                document.getElementById('checkMinusUtama').addEventListener('change', function() {
+                    let ro = !this.checked;
+                    document.getElementById('inputPokokUtama').readOnly = ro;
+                    document.getElementById('inputMarginUtama').readOnly = ro;
+                    document.getElementById('inputDendaUtama').readOnly = ro;
+                });
+            }
+            if(document.getElementById('checkMinusUrgent')) {
+                document.getElementById('checkMinusUrgent').addEventListener('change', function() {
+                    let ro = !this.checked;
+                    document.getElementById('inputPokokUrgent').readOnly = ro;
+                    document.getElementById('inputMarginUrgent').readOnly = ro;
+                    if(document.getElementById('inputDendaUrgent')) document.getElementById('inputDendaUrgent').readOnly = ro;
                 });
             }
         });
@@ -243,7 +307,7 @@
         document.getElementById('checkBayarUrgent').checked = false;
         hitungTotal();
         
-        fetch(`/api/info_tagihan/${no_anggota}`)
+        fetch(`/api/info_tagihan/${no_anggota}?tanggal=${document.getElementById('inputTanggalBayar').value}`)
         .then(r => r.json())
         .then(res => {
             if(!res.data_utama && !res.data_urgent) {
@@ -278,9 +342,16 @@
                 document.getElementById('dispTagihanPokokUtama').innerText = formatRp(res.data_utama.tagihan_pokok);
                 document.getElementById('dispTagihanMarginUtama').innerText = formatRp(res.data_utama.tagihan_margin);
                 
-                document.getElementById('inputPokokUtama').value = res.data_utama.tagihan_pokok;
+                let sisaPokokUtama = Math.max(0, (res.data_utama.tagihan_pokok || 0) - (res.data_utama.angsuran_pokok || 0));
+                let sisaMarginUtama = Math.max(0, (res.data_utama.tagihan_margin || 0) - (res.data_utama.angsuran_margin || 0));
                 
-                document.getElementById('inputMarginUtama').value = res.data_utama.tagihan_margin;
+                document.getElementById('inputPokokUtama').value = sisaPokokUtama;
+                document.getElementById('inputMarginUtama').value = sisaMarginUtama;
+                
+                document.getElementById('inputPokokUtama').readOnly = true;
+                document.getElementById('inputMarginUtama').readOnly = true;
+                document.getElementById('inputDendaUtama').readOnly = true;
+                if(document.getElementById('checkMinusUtama')) document.getElementById('checkMinusUtama').checked = false;
 
                 // Menampilkan Denda
                 const dendaUtama = res.data_utama.kalkulasi_denda || 0;
@@ -308,9 +379,17 @@
                 
                 document.getElementById('dispTagihanPokokUrgent').innerText = formatRp(res.data_urgent.tagihan_pokok);
                 document.getElementById('dispTagihanMarginUrgent').innerText = formatRp(res.data_urgent.tagihan_margin);
-                document.getElementById('inputPokokUrgent').value = res.data_urgent.tagihan_pokok;
                 
-                document.getElementById('inputMarginUrgent').value = res.data_urgent.tagihan_margin;
+                let sisaPokokUrgent = Math.max(0, (res.data_urgent.tagihan_pokok || 0) - (res.data_urgent.angsuran_pokok || 0));
+                let sisaMarginUrgent = Math.max(0, (res.data_urgent.tagihan_margin || 0) - (res.data_urgent.angsuran_margin || 0));
+                
+                document.getElementById('inputPokokUrgent').value = sisaPokokUrgent;
+                document.getElementById('inputMarginUrgent').value = sisaMarginUrgent;
+                
+                document.getElementById('inputPokokUrgent').readOnly = true;
+                document.getElementById('inputMarginUrgent').readOnly = true;
+                if(document.getElementById('inputDendaUrgent')) document.getElementById('inputDendaUrgent').readOnly = true;
+                if(document.getElementById('checkMinusUrgent')) document.getElementById('checkMinusUrgent').checked = false;
                 
                 // Jika areaUrgent memiliki input denda
                 const dendaUrgent = res.data_urgent.kalkulasi_denda || 0;
@@ -389,6 +468,7 @@
             id_utama: document.getElementById('id_utama').value,
             no_anggota: document.getElementById('id_utama').dataset.no, // Bawa identitas untuk tabel simpanan
             nama_anggota: document.getElementById('id_utama').dataset.nama,
+            tanggal_bayar: document.getElementById('inputTanggalBayar').value,
             bayar_utama: document.getElementById('areaUtama').style.display === 'block',
             nominal_pokok_utama: document.getElementById('inputPokokUtama').value,
             nominal_margin_utama: document.getElementById('inputMarginUtama').value,

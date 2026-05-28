@@ -201,9 +201,22 @@ def download_berkas(no_anggota):
     finally:
         cursor.close(); conn.close()
 
+# === API: MENGAMBIL DETAIL ANGGOTA YANG SEDANG LOGIN ===
+@api_anggota_bp.route('/api/anggota/me/detail', methods=['GET'])
+def get_my_detail():
+    no_anggota = session.get('user_id')
+    if not no_anggota or session.get('role') != 'Anggota':
+        return jsonify({'status': 'error', 'message': 'Akses ditolak. Anda belum login sebagai anggota.'}), 401
+    return get_anggota_detail(no_anggota)
+
 # === API: MENGAMBIL DETAIL ANGGOTA LENGKAP ===
 @api_anggota_bp.route('/api/anggota/<no_anggota>/detail', methods=['GET'])
 def get_anggota_detail(no_anggota):
+    # --- PROTEKSI PRIVASI: Anggota tidak boleh melihat data anggota lain ---
+    if session.get('role') == 'Anggota':
+        if no_anggota != session.get('user_id') and no_anggota != session.get('username'):
+            return jsonify({'status': 'error', 'message': 'Akses ditolak. Anda tidak bisa melihat data anggota lain.'}), 403
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -211,14 +224,26 @@ def get_anggota_detail(no_anggota):
         cursor.execute("SELECT * FROM identitas WHERE no_anggota = %s", (no_anggota,))
         identitas = cursor.fetchone()
         if not identitas:
-            return jsonify({'status': 'error', 'message': 'Anggota tidak ditemukan.'}), 404
+            # Coba cari berdasarkan nama jika frontend salah mengirimkan nama anggota alih-alih nomor
+            cursor.execute("SELECT * FROM identitas WHERE nama_anggota = %s", (no_anggota,))
+            identitas = cursor.fetchone()
             
+            if not identitas:
+                return jsonify({'status': 'error', 'message': 'Anggota tidak ditemukan.'}), 404
+                
+            # Update variabel dengan nomor anggota yang sebenarnya
+            no_anggota = identitas['no_anggota']
+
         for key, val in identitas.items():
             if hasattr(val, 'isoformat'): identitas[key] = str(val)
                 
         # 2. Simpanan
         cursor.execute("SELECT simpanan_pokok, simpanan_wajib, total_simpanan FROM simpanan WHERE nomor_anggota = %s", (no_anggota,))
         simpanan = cursor.fetchone()
+        
+        # Jika anggota belum punya buku simpanan, berikan nilai 0 agar Dashboard tidak error (Crash)
+        if not simpanan:
+            simpanan = {'simpanan_pokok': 0, 'simpanan_wajib': 0, 'total_simpanan': 0}
 
         cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
         cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
@@ -239,9 +264,23 @@ def get_anggota_detail(no_anggota):
             # Kalkulasi Denda Tunggakan Real-time
             if tag['status'] == 'BELUM BAYAR' and tag.get('jatuh_tempo'):
                 try:
-                    jt_date = datetime.strptime(tag['jatuh_tempo'], '%Y-%m-%d').date()
-                    od = max((today - jt_date).days, 0)
-                    tag['tunggakan_denda'] = ((float(tag['tagihan_pokok'] or 0) + float(tag['tagihan_margin'] or 0)) * 0.05 * od) if denda_aktif else 0
+                    jt_date = datetime.strptime(str(tag['jatuh_tempo'])[:10], '%Y-%m-%d').date()
+                    last_pay = tag.get('tgl_bayar')
+                    if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(str(last_pay)[:10], '%Y-%m-%d').date()
+                    
+                    base_date = jt_date
+                    if last_pay and last_pay > jt_date: base_date = last_pay
+                    
+                    od_sisa = max((today - base_date).days, 0)
+                    
+                    sisa_p = float(tag['tagihan_pokok'] or 0) - float(tag['angsuran_pokok'] or 0)
+                    sisa_m = float(tag['tagihan_margin'] or 0) - float(tag['angsuran_margin'] or 0)
+                    if sisa_p <= 0.01 and sisa_m <= 0.01:
+                        d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0)
+                    else:
+                        add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
+                        d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0) + add_denda
+                    tag['tunggakan_denda'] = max(0, d_kalk) if denda_aktif else 0
                 except ValueError: pass
         
         # 4. Lampiran Tagihan Dana Urgent
@@ -256,17 +295,37 @@ def get_anggota_detail(no_anggota):
             # Kalkulasi Denda Tunggakan Real-time
             if tag['status'] == 'BELUM BAYAR' and tag.get('tanggal_jatuh_tempo'):
                 try:
-                    jt_date = datetime.strptime(tag['tanggal_jatuh_tempo'], '%Y-%m-%d').date()
-                    od = max((today - jt_date).days, 0)
-                    tag['tunggakan_denda'] = ((float(tag['tagihan_pokok'] or 0) + float(tag['tagihan_margin'] or 0)) * 0.05 * od) if denda_aktif else 0
+                    jt_date = datetime.strptime(str(tag['tanggal_jatuh_tempo'])[:10], '%Y-%m-%d').date()
+                    last_pay = tag.get('tgl_bayar')
+                    if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(str(last_pay)[:10], '%Y-%m-%d').date()
+                    
+                    base_date = jt_date
+                    if last_pay and last_pay > jt_date: base_date = last_pay
+                    
+                    od_sisa = max((today - base_date).days, 0)
+                    
+                    sisa_p = float(tag['tagihan_pokok'] or 0) - float(tag['angsuran_pokok'] or 0)
+                    sisa_m = float(tag['tagihan_margin'] or 0) - float(tag['angsuran_margin'] or 0)
+                    if sisa_p <= 0.01 and sisa_m <= 0.01:
+                        d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0)
+                    else:
+                        add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
+                        d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0) + add_denda
+                    tag['tunggakan_denda'] = max(0, d_kalk) if denda_aktif else 0
                 except ValueError: pass
 
         # 5. Histori Transaksi (Jurnal Umum)
         nama_anggota = identitas['nama_anggota']
         cursor.execute("""
-            SELECT j.tanggal, c.account_name, j.keterangan, j.debit, j.kredit 
-            FROM jurnal_umum j JOIN coa c ON j.coa_id = c.id 
-            WHERE j.keterangan LIKE %s ORDER BY j.tanggal DESC, j.id DESC LIMIT 50
+            SELECT j.id, j.tanggal, c.account_name, j.keterangan, j.debit, j.kredit 
+            FROM (
+                SELECT id, tanggal, coa_id, keterangan, debit, kredit 
+                FROM jurnal_umum 
+                WHERE keterangan LIKE %s 
+                ORDER BY id DESC LIMIT 50
+            ) j
+            JOIN coa c ON j.coa_id = c.id 
+            ORDER BY j.id DESC
         """, ('%' + nama_anggota + '%',))
         histori_transaksi = cursor.fetchall()
         for h in histori_transaksi:

@@ -1,11 +1,21 @@
-from flask import Blueprint, render_template, request, redirect, session, flash
+from flask import Blueprint, render_template, request, redirect, session, flash, jsonify
 from db import get_db_connection
 import re
 
 # BARIS INILAH YANG DICARI OLEH app.py (pages_bp)
 pages_bp = Blueprint('pages', __name__)
 
-@pages_bp.before_request
+@pages_bp.after_app_request
+def add_cache_control(response):
+    # Mencegah browser menyimpan cache halaman HTML.
+    # Ini sangat ampuh mencegah bug "Sesi Menyilang" akibat tombol 'Back' browser
+    if 'text/html' in response.headers.get('Content-Type', ''):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+@pages_bp.before_app_request
 def check_auth():
     # Route yang dikecualikan dari wajib login HANYA halaman Login dan file statis
     if request.path == '/login' or request.path.startswith('/static'):
@@ -15,16 +25,37 @@ def check_auth():
     if 'user_id' not in session:
         # Jika request mengarah ke API, berikan response JSON Unauthorized (HTTP 401)
         if request.path.startswith('/api/'):
-            return {"status": "error", "message": "Unauthorized: Anda harus login untuk melakukan aksi ini."}, 401
+            return jsonify({"status": "error", "message": "Unauthorized: Anda harus login."}), 401
         return redirect('/login')
         
     # Pembatasan Akses Berdasarkan Role (Hak Akses)
     role = session.get('role')
     path = request.path
     
-    # Jika Anggota mencoba masuk ke menu Admin, paksa lempar ke dashboardnya sendiri
-    if role == 'Anggota' and path != '/dashboard_anggota' and path != '/logout':
-        return redirect('/dashboard_anggota')
+    # === PENCEGAHAN CROSSED-SESSION & AKSES ILEGAL ===
+    if role == 'Anggota':
+        allowed_api = ['/api/anggota/', '/api/update_jmo', '/api/download_berkas/']
+        if path != '/dashboard_anggota' and path != '/logout':
+            if path.startswith('/api/'):
+                if not any(path.startswith(api) for api in allowed_api):
+                    return jsonify({"status": "error", "message": "Akses ditolak. Sesi Anda telah berubah menjadi Anggota."}), 403
+            else:
+                return """
+                <div style="text-align:center; margin-top:100px; font-family:sans-serif;">
+                    <h1 style="color:red;">Akses Ditolak (Sesi Menyilang)</h1>
+                    <p>Browser mendeteksi ada login <b>Anggota</b> yang sedang aktif (mungkin di Tab lain).</p>
+                    <p>Sistem mencegah Anda membuka menu Admin demi keamanan data.</p>
+                    <br>
+                    <a href='/dashboard_anggota' style="padding:10px 20px; background:#0d6efd; color:white; text-decoration:none; border-radius:5px;">Ke Dashboard Anggota</a>
+                    <br><br><br>
+                    <a href='/logout' style="color:red; text-decoration:underline;">Logout untuk mereset sesi</a>
+                </div>
+                """, 403
+    else:
+        # Jika Admin/Manager mencoba masuk ke halaman anggota
+        if path == '/dashboard_anggota':
+            flash('Anda sedang login sebagai Admin. Tidak bisa mengakses halaman anggota.', 'info')
+            return redirect('/')
 
 @pages_bp.route('/login', methods=['GET', 'POST'])
 def login():

@@ -1,17 +1,9 @@
-# Folder Environment (Virtual Env)
+# Python & Flask
 venv/
-env/
-
-# Python Cache
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Konfigurasi Lokal & Password
+*.pyc
 .env
 
-# File Upload Pengguna (Opsional)
+# Uploads & Media
 uploads/
-
-# Editor Settings
-.vscode/
+*.pdf

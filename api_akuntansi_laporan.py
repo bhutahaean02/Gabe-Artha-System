@@ -1013,10 +1013,24 @@ def monitoring_pinjaman_api():
         
         for d in data:
             if d['jatuh_tempo'] and d.get('status_pembayaran') == 'BELUM BAYAR':
-                jt_date = datetime.strptime(str(d['jatuh_tempo']), '%Y-%m-%d').date() if isinstance(d['jatuh_tempo'], str) else d['jatuh_tempo']
-                od = max((today - jt_date).days, 0)
-                d['od_hari'] = od
-                d['tunggakan_denda'] = ((float(d['tagihan_pokok'] or 0) + float(d['tagihan_margin'] or 0)) * 0.05 * od) if denda_aktif else 0
+                jt_date = datetime.strptime(str(d['jatuh_tempo'])[:10], '%Y-%m-%d').date() if isinstance(d['jatuh_tempo'], str) else d['jatuh_tempo']
+                last_pay = d.get('tgl_bayar')
+                if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(str(last_pay)[:10], '%Y-%m-%d').date()
+                
+                base_date = jt_date
+                if last_pay and last_pay > jt_date: base_date = last_pay
+                
+                od_sisa = max((today - base_date).days, 0)
+                d['od_hari'] = max((today - jt_date).days, 0)
+                
+                sisa_p = float(d['tagihan_pokok'] or 0) - float(d['angsuran_pokok'] or 0)
+                sisa_m = float(d['tagihan_margin'] or 0) - float(d['angsuran_margin'] or 0)
+                if sisa_p <= 0.01 and sisa_m <= 0.01:
+                    d_kalk = float(d.get('tagihan_denda') or 0) - float(d['angsuran_denda'] or 0)
+                else:
+                    add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
+                    d_kalk = float(d.get('tagihan_denda') or 0) - float(d['angsuran_denda'] or 0) + add_denda
+                d['tunggakan_denda'] = max(0, d_kalk) if denda_aktif else 0
             else:
                 d['od_hari'], d['tunggakan_denda'] = 0, 0
             for key, val in d.items():
@@ -1064,12 +1078,12 @@ def cetak_laporan_harian_pdf():
         
         query_macet = """
             SELECT a.no_anggota, i.nama_anggota, a.jatuh_tempo, 
-                   (a.tagihan_pokok + a.tagihan_margin) as tagihan
+                   (a.tagihan_pokok + a.tagihan_margin - a.angsuran_pokok - a.angsuran_margin) as tagihan
             FROM (
-                SELECT no_anggota, jatuh_tempo, tagihan_pokok, tagihan_margin
+                SELECT no_anggota, jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin
                 FROM angsuran_multiguna_tempo WHERE status = 'BELUM BAYAR'
                 UNION ALL
-                SELECT no_anggota, tanggal_jatuh_tempo as jatuh_tempo, tagihan_pokok, tagihan_margin
+                SELECT no_anggota, tanggal_jatuh_tempo as jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin
                 FROM angsuran_dana_urgent WHERE status = 'BELUM BAYAR'
             ) a
             JOIN identitas i ON a.no_anggota = i.no_anggota
@@ -1178,7 +1192,7 @@ def cetak_laporan_harian_pdf():
         for row in data_macet:
             jt = row['jatuh_tempo']
             if not jt: continue
-            if isinstance(jt, str): jt = datetime.strptime(jt, '%Y-%m-%d').date()
+            if isinstance(jt, str): jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date()
             od_hari = (target_date - jt).days
             na = row['no_anggota']
             
@@ -1267,13 +1281,13 @@ def get_laporan_harian():
 
         query_macet = """
             SELECT a.no_anggota, i.nama_anggota, a.jenis_pinjaman, a.jatuh_tempo, 
-                   (a.tagihan_pokok + a.tagihan_margin) as tagihan,
+                   (a.tagihan_pokok + a.tagihan_margin - a.angsuran_pokok - a.angsuran_margin) as tagihan,
                    p.progres_marketing, p.solusi
             FROM (
-                SELECT no_anggota, jenis_pinjaman, jatuh_tempo, tagihan_pokok, tagihan_margin
+                SELECT no_anggota, jenis_pinjaman, jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin
                 FROM angsuran_multiguna_tempo WHERE status = 'BELUM BAYAR'
                 UNION ALL
-                SELECT no_anggota, jenis_dana_urgent as jenis_pinjaman, tanggal_jatuh_tempo as jatuh_tempo, tagihan_pokok, tagihan_margin
+                SELECT no_anggota, jenis_dana_urgent as jenis_pinjaman, tanggal_jatuh_tempo as jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin
                 FROM angsuran_dana_urgent WHERE status = 'BELUM BAYAR'
             ) a
             JOIN identitas i ON a.no_anggota = i.no_anggota
@@ -1302,7 +1316,7 @@ def get_laporan_harian():
         for row in data_macet:
             jt = row['jatuh_tempo']
             if not jt: continue # Hindari error jika tanggal jatuh tempo kosong
-            if isinstance(jt, str): jt = datetime.strptime(jt, '%Y-%m-%d').date()
+            if isinstance(jt, str): jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date()
             
             od_hari = (target_date - jt).days
             na = row['no_anggota']

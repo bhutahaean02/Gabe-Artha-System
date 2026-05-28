@@ -425,6 +425,70 @@
         </form>
     </div>
 </div>
+
+<!-- Modal Bayar Sisa / Minus -->
+<div class="modal fade" id="modalBayarSisa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form id="formBayarSisa" class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Tambah Pembayaran Sisa Tagihan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <input type="hidden" id="sisa_jenis">
+                <input type="hidden" id="sisa_id_tagihan">
+                <input type="hidden" id="sisa_no_anggota">
+                <input type="hidden" id="sisa_angsuran_ke">
+                <input type="hidden" id="sisa_calc_from">
+                <input type="hidden" id="sisa_pokok_margin">
+                <input type="hidden" id="sisa_base_denda">
+                
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label class="form-label small fw-bold text-muted">Tanggal Pembayaran</label>
+                        <input type="date" id="tglBayarSisa" class="form-control bg-white fw-bold text-primary" required>
+                    </div>
+                </div>
+                
+                <h6 class="text-primary mt-2 border-bottom pb-2 fw-bold"><i class="fa-solid fa-file-invoice me-2"></i>Rincian Sisa Tagihan</h6>
+                <div class="row g-3 bg-white p-3 rounded mb-4 border mx-0 shadow-sm">
+                    <div class="col-4">
+                        <label class="small text-muted fw-bold">Sisa Pokok</label>
+                        <div class="fs-5 fw-bold text-dark" id="dispMaxSisaPokok">Rp 0</div>
+                    </div>
+                    <div class="col-4">
+                        <label class="small text-muted fw-bold">Sisa Margin</label>
+                        <div class="fs-5 fw-bold text-dark" id="dispMaxSisaMargin">Rp 0</div>
+                    </div>
+                    <div class="col-4">
+                        <label class="small text-muted fw-bold text-danger">Sisa Denda</label>
+                        <div class="fs-5 fw-bold text-danger" id="dispMaxSisaDenda">Rp 0</div>
+                    </div>
+                </div>
+
+                <h6 class="text-success mt-2 border-bottom pb-2 fw-bold"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
+                <div class="row g-3 mb-2">
+                    <div class="col-4">
+                        <label class="small fw-bold">Bayar Pokok (Rp)</label>
+                        <input type="number" id="inputSisaPokok" class="form-control fw-bold text-primary" required>
+                    </div>
+                    <div class="col-4">
+                        <label class="small fw-bold">Bayar Margin (Rp)</label>
+                        <input type="number" id="inputSisaMargin" class="form-control fw-bold text-primary" required>
+                    </div>
+                    <div class="col-4">
+                        <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
+                        <input type="number" id="inputSisaDenda" class="form-control fw-bold text-danger" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" id="btnSubmitSisa" class="btn btn-success fw-bold"><i class="fa-solid fa-check me-1"></i> Proses Pembayaran</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -557,6 +621,7 @@
         let tgl_cair = firstRow.tgl_pencairan || '-';
         let tgl_jatemp_awal = firstRow.jatuh_tempo || '-';
         
+        let btnBatalPencairan = `<button onclick="batalPencairan('utama', '${identitas.no_anggota}', '${tgl_cair}')" class="btn btn-sm btn-danger text-white"><i class="fa-solid fa-trash me-1"></i> Batal Pencairan Ini</button>`;
         let btnAkad = `<a href="/api/cetak_akad/${firstRow.no_anggota}/${tgl_cair}" target="_blank" class="btn btn-sm btn-primary"><i class="fa-solid fa-file-contract me-1"></i> Cetak Akad</a>`;
         let btnPernyataan = `<a href="/api/cetak_pernyataan/${firstRow.no_anggota}/${tgl_cair}" target="_blank" class="btn btn-sm btn-info text-white"><i class="fa-solid fa-file-signature me-1"></i> Surat Pernyataan</a>`;
 
@@ -587,9 +652,11 @@
             let angMargin = Number(row.angsuran_margin) || 0;
             let angDenda = Number(row.angsuran_denda) || 0;
             
+            let tagDendaGross = tgkDenda + angDenda;
+            
             totTagPokok += tagPokok;
             totTagMargin += tagMargin;
-            totTagDenda += tgkDenda; 
+            totTagDenda += tagDendaGross; 
             
             totAngPokok += angPokok;
             totAngMargin += angMargin;
@@ -598,15 +665,32 @@
             currentBakiDebet -= angPokok;
             
             let btnStruk = row.status === 'LUNAS' ? `<a href="/api/cetak_struk/utama/${row.id}/pdf" target="_blank" class="badge bg-danger ms-1 text-decoration-none" title="Cetak Struk">Cetak</a>` : '';
+            let btnBatal = (row.status === 'LUNAS' || Number(row.angsuran_pokok) > 0 || Number(row.angsuran_margin) > 0) ? `<button onclick="batalAngsuran('utama', ${row.id}, '${row.no_anggota}')" class="btn btn-sm btn-outline-danger ms-1 py-0 px-1" style="font-size:0.7rem;" title="Batalkan Pembayaran"><i class="fa-solid fa-rotate-left"></i> Batal</button>` : '';
             let btnEditTgl = row.status === 'BELUM BAYAR' ? `<button onclick="editJatuhTempo('utama', ${row.id}, '${row.jatuh_tempo}', '${row.no_anggota}')" class="btn btn-sm btn-outline-secondary ms-1 py-0 px-1" style="font-size:0.7rem;" title="Ubah Jatuh Tempo"><i class="fa-solid fa-pencil"></i></button>` : '';
-            let sisaPokokRow = row.status === 'LUNAS' ? 0 : (tagPokok - angPokok);
-            let sisaMarginRow = row.status === 'LUNAS' ? 0 : (tagMargin - angMargin);
-            let sisaDendaRow = row.status === 'LUNAS' ? 0 : Math.max(0, tgkDenda - angDenda);
+            let sisaPokokRow = Math.max(0, tagPokok - angPokok);
+            let sisaMarginRow = Math.max(0, tagMargin - angMargin);
+            let sisaDendaRow = tgkDenda;
+            let isKurangBayar = row.status === 'BELUM BAYAR' && (angPokok > 0 || angMargin > 0);
+
+            let parseDateLocal = (str) => {
+                if(!str || String(str).trim() === 'None' || String(str).trim() === 'null') return null;
+                let p = String(str).substring(0,10).split('-');
+                if(p.length === 3) return new Date(p[0], p[1]-1, p[2]);
+                return null;
+            };
+            let jtDate = parseDateLocal(row.jatuh_tempo) || new Date();
+            let lastTglDate = parseDateLocal(row.tgl_bayar);
+            let calcFromDate = (lastTglDate && lastTglDate > jtDate) ? lastTglDate : jtDate;
+            let calcFromStr = calcFromDate.getFullYear() + '-' + String(calcFromDate.getMonth()+1).padStart(2,'0') + '-' + String(calcFromDate.getDate()).padStart(2,'0');
+            let tagDendaDb = Number(row.tagihan_denda) || 0;
+            let baseDenda = tagDendaDb - angDenda;
+
+            let btnBayarSisa = isKurangBayar ? `<button onclick="bukaModalBayarSisa('utama', ${row.id}, '${row.no_anggota}', ${sisaPokokRow}, ${sisaMarginRow}, ${sisaDendaRow}, ${row.angsuran_ke}, '${calcFromStr}', ${baseDenda})" class="btn btn-sm btn-success ms-1 py-0 px-1" style="font-size:0.7rem;" title="Tambah Pembayaran (Kurang)"><i class="fa-solid fa-plus"></i> Add</button>` : '';
 
             tableRows += `<tr>
                 <td>${index + 2}</td>
                 <td>${row.jatuh_tempo} ${btnEditTgl}</td>
-                <td class="text-start">Tagihan ke-${row.angsuran_ke} ${btnStruk}</td>
+                <td class="text-start">Tagihan ke-${row.angsuran_ke} ${btnStruk} ${btnBatal} ${btnBayarSisa}</td>
                 <td class="text-end">0</td>
                 <td>0</td>
                 <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
@@ -680,7 +764,10 @@
                     <div class="d-flex justify-content-between text-danger fs-6"><span>Total Sisa Hutang</span><span>: ${formatRp(totSisaHutang)}</span></div>
                 </div>
             </div>
-            <div class="mt-3 text-end">${btnAkad} ${btnPernyataan}</div>
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div>${btnBatalPencairan}</div>
+                <div>${btnAkad} ${btnPernyataan}</div>
+            </div>
         </div>`;
     }
 
@@ -694,6 +781,8 @@
         let tgl_cair = firstRow.tgl_pencairan || '-';
         let tgl_jatemp = firstRow.tanggal_jatuh_tempo || '-';
         
+        let btnBatalPencairan = `<button onclick="batalPencairan('urgent', '${identitas.no_anggota}', '${tgl_cair}')" class="btn btn-sm btn-danger text-white"><i class="fa-solid fa-trash me-1"></i> Batal Pencairan Ini</button>`;
+
         let totTagPokok = 0, totTagMargin = 0, totTagDenda = 0;
         let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0;
         let currentBakiDebet = besar_pinjaman;
@@ -721,9 +810,11 @@
             let angMargin = Number(row.angsuran_margin) || 0;
             let angDenda = Number(row.angsuran_denda) || 0;
             
+            let tagDendaGross = tgkDenda + angDenda;
+            
             totTagPokok += tagPokok;
             totTagMargin += tagMargin;
-            totTagDenda += tgkDenda; 
+            totTagDenda += tagDendaGross; 
             
             totAngPokok += angPokok;
             totAngMargin += angMargin;
@@ -732,15 +823,32 @@
             currentBakiDebet -= angPokok;
             
             let btnStruk = row.status === 'LUNAS' ? `<a href="/api/cetak_struk/urgent/${row.id}/pdf" target="_blank" class="badge bg-danger ms-1 text-decoration-none" title="Cetak Struk">Cetak Bukti</a>` : '';
+            let btnBatal = (row.status === 'LUNAS' || Number(row.angsuran_pokok) > 0 || Number(row.angsuran_margin) > 0) ? `<button onclick="batalAngsuran('urgent', ${row.id}, '${row.no_anggota}')" class="btn btn-sm btn-outline-danger ms-1 py-0 px-1" style="font-size:0.7rem;" title="Batalkan Pembayaran"><i class="fa-solid fa-rotate-left"></i> Batal</button>` : '';
             let btnEditTgl = row.status === 'BELUM BAYAR' ? `<button onclick="editJatuhTempo('urgent', ${row.id}, '${row.tanggal_jatuh_tempo || ''}', '${row.no_anggota}')" class="btn btn-sm btn-outline-secondary ms-1 py-0 px-1" style="font-size:0.7rem;" title="Ubah Jatuh Tempo"><i class="fa-solid fa-pencil"></i></button>` : '';
-            let sisaPokokRow = row.status === 'LUNAS' ? 0 : (tagPokok - angPokok);
-            let sisaMarginRow = row.status === 'LUNAS' ? 0 : (tagMargin - angMargin);
-            let sisaDendaRow = row.status === 'LUNAS' ? 0 : Math.max(0, tgkDenda - angDenda);
+            let sisaPokokRow = Math.max(0, tagPokok - angPokok);
+            let sisaMarginRow = Math.max(0, tagMargin - angMargin);
+            let sisaDendaRow = tgkDenda;
+            let isKurangBayar = row.status === 'BELUM BAYAR' && (angPokok > 0 || angMargin > 0);
+
+            let parseDateLocal = (str) => {
+                if(!str || String(str).trim() === 'None' || String(str).trim() === 'null') return null;
+                let p = String(str).substring(0,10).split('-');
+                if(p.length === 3) return new Date(p[0], p[1]-1, p[2]);
+                return null;
+            };
+            let jtDate = parseDateLocal(row.tanggal_jatuh_tempo) || new Date();
+            let lastTglDate = parseDateLocal(row.tgl_bayar);
+            let calcFromDate = (lastTglDate && lastTglDate > jtDate) ? lastTglDate : jtDate;
+            let calcFromStr = calcFromDate.getFullYear() + '-' + String(calcFromDate.getMonth()+1).padStart(2,'0') + '-' + String(calcFromDate.getDate()).padStart(2,'0');
+            let tagDendaDb = Number(row.tagihan_denda) || 0;
+            let baseDenda = tagDendaDb - angDenda;
+
+            let btnBayarSisa = isKurangBayar ? `<button onclick="bukaModalBayarSisa('urgent', ${row.id}, '${row.no_anggota}', ${sisaPokokRow}, ${sisaMarginRow}, ${sisaDendaRow}, 1, '${calcFromStr}', ${baseDenda})" class="btn btn-sm btn-success ms-1 py-0 px-1" style="font-size:0.7rem;" title="Tambah Pembayaran (Kurang)"><i class="fa-solid fa-plus"></i> Add</button>` : '';
 
             tableRows += `<tr>
                 <td>${index + 2}</td>
                 <td>${row.tanggal_jatuh_tempo || '-'} ${btnEditTgl}</td>
-                <td class="text-start">Pelunasan Jatuh Tempo ${btnStruk}</td>
+                <td class="text-start">Pelunasan Jatuh Tempo ${btnStruk} ${btnBatal} ${btnBayarSisa}</td>
                 <td class="text-end">0</td>
                 <td>-</td>
                 <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
@@ -813,6 +921,10 @@
                     <hr class="my-1">
                     <div class="d-flex justify-content-between text-danger fs-6"><span>Total Sisa Hutang</span><span>: ${formatRp(totSisaHutang)}</span></div>
                 </div>
+            </div>
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div>${btnBatalPencairan}</div>
+                <div></div>
             </div>
         </div>`;
     }
@@ -1063,5 +1175,170 @@
             });
         }
     }
+
+    // FUNGSI BATAL ANGSURAN (REVERSE)
+    function batalAngsuran(jenis, idTagihan, noAnggota) {
+        if(!confirm("Anda yakin ingin membatalkan pembayaran angsuran ini? Transaksi akan dikembalikan ke status 'BELUM BAYAR' dan Jurnal Akuntansi (Buku Besar) akan dikoreksi otomatis. Tindakan ini tidak dapat diurungkan!")) return;
+        
+        fetch('/api/batal_angsuran', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({jenis: jenis, id_tagihan: idTagihan})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert(data.message);
+                lihatDetail(noAnggota); // Refresh modal detail
+            } else {
+                alert("Gagal membatalkan angsuran: " + data.message);
+            }
+        })
+        .catch(err => alert("Terjadi kesalahan jaringan/sistem."));
+    }
+
+    // FUNGSI BATAL PENCAIRAN KESELURUHAN
+    function batalPencairan(jenis, noAnggota, tglPencairan) {
+        if(!confirm("PERINGATAN KRUSIAL!\nAnda yakin ingin membatalkan PENCAIRAN ini?\nSemua jadwal angsuran terkait pencairan ini akan dihapus dan Saldo Kas/Jurnal Akuntansi akan dikoreksi otomatis.")) return;
+        
+        fetch('/api/batal_pencairan', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({jenis: jenis, no_anggota: noAnggota, tgl_pencairan: tglPencairan})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert(data.message);
+                lihatDetail(noAnggota);
+            } else {
+                alert("Gagal membatalkan pencairan: " + data.message);
+            }
+        })
+        .catch(err => alert("Terjadi kesalahan jaringan/sistem."));
+    }
+
+    // FUNGSI MEMBUKA MODAL BAYAR SISA / KURANG
+    function bukaModalBayarSisa(jenis, idTagihan, noAnggota, sisaPokok, sisaMargin, sisaDenda, angsuranKe, calcFromStr, baseDenda) {
+        document.getElementById('sisa_jenis').value = jenis;
+        document.getElementById('sisa_id_tagihan').value = idTagihan;
+        document.getElementById('sisa_no_anggota').value = noAnggota;
+        document.getElementById('sisa_angsuran_ke').value = angsuranKe || 1;
+        document.getElementById('sisa_calc_from').value = calcFromStr || '';
+        document.getElementById('sisa_pokok_margin').value = (sisaPokok + sisaMargin) || 0;
+        document.getElementById('sisa_base_denda').value = baseDenda || 0;
+        
+        let today = new Date();
+        let yyyy = today.getFullYear();
+        let mm = String(today.getMonth() + 1).padStart(2, '0');
+        let dd = String(today.getDate()).padStart(2, '0');
+        document.getElementById('tglBayarSisa').value = `${yyyy}-${mm}-${dd}`;
+        
+        document.getElementById('dispMaxSisaPokok').innerText = formatRp(sisaPokok);
+        document.getElementById('inputSisaPokok').value = sisaPokok;
+        document.getElementById('inputSisaPokok').max = sisaPokok;
+        document.getElementById('inputSisaPokok').min = 0;
+        
+        document.getElementById('dispMaxSisaMargin').innerText = formatRp(sisaMargin);
+        document.getElementById('inputSisaMargin').value = sisaMargin;
+        document.getElementById('inputSisaMargin').max = sisaMargin;
+        document.getElementById('inputSisaMargin').min = 0;
+        
+        document.getElementById('dispMaxSisaDenda').innerText = formatRp(sisaDenda);
+        document.getElementById('inputSisaDenda').value = sisaDenda;
+        document.getElementById('inputSisaDenda').max = sisaDenda;
+        document.getElementById('inputSisaDenda').min = 0;
+        
+        // Memastikan denda tersinkronisasi jika tanggal berubah saat modal dibuka
+        document.getElementById('tglBayarSisa').dispatchEvent(new Event('change'));
+
+        const modal = new bootstrap.Modal(document.getElementById('modalBayarSisa'));
+        modal.show();
+    }
+
+    // RECALCULATE DENDA OTOMATIS SAAT TANGGAL DIUBAH PADA FORM ADD
+    document.getElementById('tglBayarSisa').addEventListener('change', function() {
+        let selectedDateStr = this.value;
+        if(!selectedDateStr) return;
+        
+        let calcFromStr = document.getElementById('sisa_calc_from').value;
+        if(!calcFromStr) return;
+        
+        let parseDateLocal = (str) => {
+            let p = String(str).substring(0,10).split('-');
+            return new Date(p[0], p[1]-1, p[2]);
+        };
+        
+        let selectedDate = parseDateLocal(selectedDateStr);
+        let calcFromDate = parseDateLocal(calcFromStr);
+        
+        const utc1 = Date.UTC(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const utc2 = Date.UTC(calcFromDate.getFullYear(), calcFromDate.getMonth(), calcFromDate.getDate());
+        let diffDays = Math.max(0, Math.floor((utc1 - utc2) / (1000 * 60 * 60 * 24)));
+        
+        let dendaAktif = document.getElementById('switchDendaAktif') ? document.getElementById('switchDendaAktif').checked : true;
+        let baseDenda = Number(document.getElementById('sisa_base_denda').value) || 0;
+        let sisaPM = Number(document.getElementById('sisa_pokok_margin').value) || 0;
+        
+        let dendaBaru = baseDenda;
+        if(sisaPM > 0.01 && dendaAktif) dendaBaru += (sisaPM * 0.005 * diffDays);
+        
+        document.getElementById('dispMaxSisaDenda').innerText = formatRp(dendaBaru);
+        document.getElementById('inputSisaDenda').value = dendaBaru;
+        document.getElementById('inputSisaDenda').max = dendaBaru;
+    });
+
+    // FUNGSI SUBMIT BAYAR SISA
+    document.getElementById('formBayarSisa').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubmitSisa');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Memproses...';
+        
+        let jenis = document.getElementById('sisa_jenis').value;
+        let namaAnggota = document.getElementById('detailNamaAnggota').innerText.split('(')[0].trim();
+        
+        let payload = {
+            no_anggota: document.getElementById('sisa_no_anggota').value,
+            nama_anggota: namaAnggota,
+            tanggal_bayar: document.getElementById('tglBayarSisa').value
+        };
+        
+        if(jenis === 'utama') {
+            payload.bayar_utama = true;
+            payload.id_utama = document.getElementById('sisa_id_tagihan').value;
+            payload.nominal_pokok_utama = document.getElementById('inputSisaPokok').value;
+            payload.nominal_margin_utama = document.getElementById('inputSisaMargin').value;
+            payload.nominal_denda_utama = document.getElementById('inputSisaDenda').value;
+            payload.angsuran_ke_utama = document.getElementById('sisa_angsuran_ke').value;
+        } else {
+            payload.bayar_urgent = true;
+            payload.id_urgent = document.getElementById('sisa_id_tagihan').value;
+            payload.nominal_pokok_urgent = document.getElementById('inputSisaPokok').value;
+            payload.nominal_margin_urgent = document.getElementById('inputSisaMargin').value;
+            payload.nominal_denda_urgent = document.getElementById('inputSisaDenda').value;
+        }
+
+        fetch('/api/bayar_angsuran', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('Pembayaran tambahan berhasil diproses!');
+                bootstrap.Modal.getInstance(document.getElementById('modalBayarSisa')).hide();
+                lihatDetail(payload.no_anggota);
+            } else {
+                alert('Gagal: ' + data.message);
+            }
+        })
+        .catch(err => alert('Terjadi kesalahan sistem.'))
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Proses Pembayaran';
+        });
+    });
 </script>
 {% endblock %}
