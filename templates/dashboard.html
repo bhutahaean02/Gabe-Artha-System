@@ -4,64 +4,49 @@
 {% block page_title %}Dashboard Utama{% endblock %}
 
 {% block content %}
-<div class="row g-4 mb-4">
-    <!-- Card: Total Anggota Terdaftar -->
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm border-start border-primary border-4 h-100 py-2">
+<!-- HIGHLIGHT DASHBOARD METRICS -->
+<div class="row g-3 mb-4">
+    <!-- Kas Utama -->
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-success text-white h-100">
             <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Anggota</div>
-                        <div class="h3 mb-0 fw-bold text-gray-800" id="dashTotalAnggota">
-                            <i class="fa-solid fa-spinner fa-spin fa-sm text-muted"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fa-solid fa-users fa-3x text-light"></i>
-                    </div>
-                </div>
+                <h6><i class="fa-solid fa-wallet me-2"></i>Total Kas Saat Ini</h6>
+                <h4 id="dash_total_kas"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
             </div>
         </div>
     </div>
+    <!-- Outstanding Piutang -->
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-primary text-white h-100">
+            <div class="card-body">
+                <h6><i class="fa-solid fa-hand-holding-dollar me-2"></i>Pinjaman Beredar</h6>
+                <h4 id="dash_total_piutang"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+            </div>
+        </div>
+    </div>
+    <!-- Total Simpanan -->
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+            <div class="card-body">
+                <h6><i class="fa-solid fa-piggy-bank me-2"></i>Kewajiban Simpanan</h6>
+                <h4 id="dash_total_simpanan"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+            </div>
+        </div>
+    </div>
+    <!-- Jumlah Anggota -->
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm bg-dark text-white h-100">
+            <div class="card-body">
+                <h6><i class="fa-solid fa-users me-2"></i>Anggota Terdaftar</h6>
+                <h4 id="dash_total_anggota"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Card: Laba / Rugi Berjalan -->
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm border-start border-success border-4 h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Laba Bersih Berjalan</div>
-                        <div class="h4 mb-0 fw-bold text-gray-800" id="dashLabaBersih">
-                            <i class="fa-solid fa-spinner fa-spin fa-sm text-muted"></i>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fa-solid fa-sack-dollar fa-3x text-light"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card: Jalan Pintas Transaksi -->
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm border-start border-warning border-4 h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Aksi Cepat</div>
-                        <div class="mt-2">
-                            <a href="/pencairan" class="btn btn-sm btn-outline-primary mb-1"><i class="fa-solid fa-plus me-1"></i> Pencairan</a>
-                            <a href="/pembayaran" class="btn btn-sm btn-outline-success mb-1"><i class="fa-solid fa-check me-1"></i> Terima Angsuran</a>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fa-solid fa-rocket fa-3x text-light"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="d-flex justify-content-end mb-3">
+    <a href="/pencairan" class="btn btn-sm btn-primary me-2"><i class="fa-solid fa-plus me-1"></i> Pencairan Baru</a>
+    <a href="/pembayaran" class="btn btn-sm btn-success"><i class="fa-solid fa-check me-1"></i> Terima Angsuran</a>
 </div>
 
 <!-- SECTION EVALUASI KEUANGAN -->
@@ -139,29 +124,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
-        // Fetch Total Anggota
-        fetch('/api/identitas')
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                document.getElementById('dashTotalAnggota').innerText = data.data.length;
-            }
-        }).catch(err => console.error(err));
-
-        // Fetch Total Laba Bersih
-        fetch('/api/laba_rugi')
-        .then(res => res.json())
-        .then(data => {
-            if(data.status === 'success') {
-                const laba = data.data.laba_bersih;
-                const el = document.getElementById('dashLabaBersih');
-                el.innerText = 'Rp ' + laba.toLocaleString('id-ID');
-                if(laba < 0) {
-                    el.classList.add('text-danger'); // Merah jika rugi
-                }
-            }
-        }).catch(err => console.error(err));
-
         // Fetch Evaluasi Dashboard
         fetch('/api/evaluasi_dashboard')
         .then(res => res.json())
@@ -170,6 +132,14 @@
                 const evalData = data.data;
                 const formatRp = (num) => 'Rp ' + num.toLocaleString('id-ID');
                 
+                // Summary Cards
+                if (evalData.summary_cards) {
+                    document.getElementById('dash_total_kas').innerText = formatRp(evalData.summary_cards.total_kas);
+                    document.getElementById('dash_total_piutang').innerText = formatRp(evalData.summary_cards.total_piutang);
+                    document.getElementById('dash_total_simpanan').innerText = formatRp(evalData.summary_cards.total_simpanan);
+                    document.getElementById('dash_total_anggota').innerText = evalData.summary_cards.total_anggota + ' Orang';
+                }
+
                 // Harian
                 document.getElementById('lblHariIni').innerText = evalData.harian.now.tanggal;
                 document.getElementById('lblHariBulanLalu').innerText = evalData.harian.prev.tanggal;
@@ -189,26 +159,108 @@
 
                 // Chart Bulanan
                 const ctx = document.getElementById('chartBulanan').getContext('2d');
+                
+                // Membuat gradient untuk mempercantik area chart
+                let gradIncome = ctx.createLinearGradient(0, 0, 0, 400);
+                gradIncome.addColorStop(0, 'rgba(25, 135, 84, 0.4)');
+                gradIncome.addColorStop(1, 'rgba(25, 135, 84, 0.0)');
+
+                let gradExpense = ctx.createLinearGradient(0, 0, 0, 400);
+                gradExpense.addColorStop(0, 'rgba(220, 53, 69, 0.4)');
+                gradExpense.addColorStop(1, 'rgba(220, 53, 69, 0.0)');
+
+                let gradProfit = ctx.createLinearGradient(0, 0, 0, 400);
+                gradProfit.addColorStop(0, 'rgba(13, 110, 253, 0.4)');
+                gradProfit.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
+
                 new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: evalData.bulanan.map(b => b.bulan),
                         datasets: [
                             {
                                 label: 'Pemasukan (Pendapatan)',
                                 data: evalData.bulanan.map(b => b.pendapatan),
-                                backgroundColor: 'rgba(25, 135, 84, 0.8)',
-                                borderRadius: 4
+                                borderColor: '#198754',
+                                backgroundColor: gradIncome,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#198754',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#198754',
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true,
+                                tension: 0.4
                             },
                             {
                                 label: 'Pengeluaran (Beban)',
                                 data: evalData.bulanan.map(b => b.beban),
-                                backgroundColor: 'rgba(220, 53, 69, 0.8)',
-                                borderRadius: 4
+                                borderColor: '#dc3545',
+                                backgroundColor: gradExpense,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#dc3545',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#dc3545',
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Laba Bersih',
+                                data: evalData.bulanan.map(b => b.pendapatan - b.beban),
+                                borderColor: '#0d6efd',
+                                backgroundColor: gradProfit,
+                                borderWidth: 3,
+                                pointBackgroundColor: '#0d6efd',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: '#0d6efd',
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: true,
+                                tension: 0.4
                             }
                         ]
                     },
-                    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+                    options: { 
+                        responsive: true, 
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: { 
+                            legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { 
+                                grid: { borderDash: [5, 5], color: '#e9ecef' },
+                                ticks: {
+                                    callback: function(value) {
+                                        if (value >= 1000000000) return 'Rp ' + (value / 1000000000) + ' M';
+                                        if (value >= 1000000) return 'Rp ' + (value / 1000000) + ' Jt';
+                                        if (value >= 1000) return 'Rp ' + (value / 1000) + ' Rb';
+                                        return 'Rp ' + value;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             }
         }).catch(err => console.error(err));

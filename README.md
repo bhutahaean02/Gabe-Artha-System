@@ -109,4 +109,8 @@ Aplikasi akan berjalan di server lokal. Buka browser dan akses alamat berikut:
 - `uploads/`: Direktori untuk menyimpan hasil unggahan dokumen PDF milik anggota.
 
 ---
+<<<<<<< HEAD
 *© 2026 - Dikembangkan secara eksklusif untuk KSP Gabe Artha Nauli.*
+=======
+*© 2026 - Dikembangkan secara eksklusif untuk KSP Gabe Artha Nauli.*
+>>>>>>> 9c26c9487aa487c8aad35478fa7f171e0b45e169

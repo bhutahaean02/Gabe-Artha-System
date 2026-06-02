@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, session, flash, jsonify
 from db import get_db_connection
 import re
+from werkzeug.security import check_password_hash
 
 # BARIS INILAH YANG DICARI OLEH app.py (pages_bp)
 pages_bp = Blueprint('pages', __name__)
@@ -71,56 +72,64 @@ def login():
         cursor = conn.cursor(dictionary=True)
         try:
             # Cek 1: Cari di tabel Staff (Admin & Manager)
-            cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", (username, password))
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
             if user:
-                nama_user = user['nama_lengkap'] or user['username']
+                # Catatan: Ini mengasumsikan password di tabel users sudah di-hash. 
+                # Jika masih plain text (kondisi transisi), hapus baris pengecekan hash di bawah dan gunakan plain text sementara.
+                if check_password_hash(user['password'], password) or user['password'] == password:
+                    nama_user = user['nama_lengkap'] or user['username']
                 
-                # 1. Hapus kata 'cabang'
-                nama_pendek = re.sub(r'(?i)\bcabang\b', '', nama_user)
-                # 2. Hapus teks di dalam kurung
-                nama_pendek = re.sub(r'\(.*?\)', '', nama_pendek)
-                # 3. Ubah simbol seperti strip (-) menjadi spasi agar pemisahan kata akurat
-                nama_pendek = re.sub(r'[^a-zA-Z0-9\s]', ' ', nama_pendek)
-                
-                # 4. Hilangkan kata terduplikasi
-                words = nama_pendek.split()
-                unique_words = []
-                for w in words:
-                    if w.lower() not in [uw.lower() for uw in unique_words]:
-                        unique_words.append(w)
-                # 5. Rapikan menjadi Huruf Kapital di awal (contoh: "Admin Cilegon")
-                nama_final = ' '.join(unique_words).title()
+                    # 1. Hapus kata 'cabang'
+                    nama_pendek = re.sub(r'(?i)\bcabang\b', '', nama_user)
+                    # 2. Hapus teks di dalam kurung
+                    nama_pendek = re.sub(r'\(.*?\)', '', nama_pendek)
+                    # 3. Ubah simbol seperti strip (-) menjadi spasi agar pemisahan kata akurat
+                    nama_pendek = re.sub(r'[^a-zA-Z0-9\s]', ' ', nama_pendek)
+                    
+                    # 4. Hilangkan kata terduplikasi
+                    words = nama_pendek.split()
+                    unique_words = []
+                    for w in words:
+                        if w.lower() not in [uw.lower() for uw in unique_words]:
+                            unique_words.append(w)
+                    # 5. Rapikan menjadi Huruf Kapital di awal (contoh: "Admin Cilegon")
+                    nama_final = ' '.join(unique_words).title()
 
-                session.update({
-                    'user_id': user['id'], 
-                    # Timpa username di session dengan nama pendek agar UI langsung berubah
-                    'username': nama_final, 
-                    'nama': nama_final, 
-                    'nama_lengkap': nama_final, 
-                    'role': user['role'], 
-                    'cabang': user.get('cabang', 'GAS')
-                })
-                return redirect('/')
+                    session.update({
+                        'user_id': user['id'], 
+                        'username': nama_final, 
+                        'nama': nama_final, 
+                        'nama_lengkap': nama_final, 
+                        'role': user['role'], 
+                        'cabang': user.get('cabang', 'GAS')
+                    })
+                    return redirect('/')
                 
-            # Cek 2: Cari di tabel Nasabah (Anggota) menggunakan Nama dan No Anggota
-            # Fleksibel: Username bisa diisi Nama dan Password diisi No Anggota, atau sebaliknya.
+            # Cek 2: Cari di tabel Nasabah (Anggota) menggunakan No Anggota
             cursor.execute("""
-                SELECT no_anggota, nama_anggota, cabang FROM identitas 
-                WHERE (nama_anggota = %s AND no_anggota = %s) OR (no_anggota = %s AND nama_anggota = %s)
-            """, (username, password, username, password))
+                SELECT no_anggota, nama_anggota, password, cabang FROM identitas 
+                WHERE no_anggota = %s OR email = %s
+            """, (username, username))
             anggota = cursor.fetchone()
             if anggota:
-                session.update({
-                    'user_id': anggota['no_anggota'], 
-                    # Timpa juga untuk anggota agar konsisten
-                    'username': anggota['nama_anggota'], 
-                    'nama': anggota['nama_anggota'],
-                    'nama_lengkap': anggota['nama_anggota'],
-                    'role': 'Anggota', 
-                    'cabang': anggota.get('cabang', 'GAS')
-                })
-                return redirect('/dashboard_anggota')
+                # Jika password ada dan berupa hash, kita cek. Bila menggunakan ID sementara saat pembuatan, bandingkan.
+                is_valid = False
+                if anggota['password'] and check_password_hash(anggota['password'], password):
+                    is_valid = True
+                elif password == anggota['no_anggota']:  # Fallback kalau belum pernah setup password
+                    is_valid = True
+                    
+                if is_valid:
+                    session.update({
+                        'user_id': anggota['no_anggota'], 
+                        'username': anggota['nama_anggota'], 
+                        'nama': anggota['nama_anggota'],
+                        'nama_lengkap': anggota['nama_anggota'],
+                        'role': 'Anggota', 
+                        'cabang': anggota.get('cabang', 'GAS')
+                    })
+                    return redirect('/dashboard_anggota')
                 
             flash('Kredensial tidak valid! Periksa kembali Nama/Username dan Password/No Anggota Anda.', 'danger')
         finally: cursor.close(); conn.close()

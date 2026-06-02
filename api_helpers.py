@@ -28,13 +28,16 @@ def parse_int(value, field_name):
         raise ValueError(f"Input pada '{field_name}' harus berupa angka bulat (tanpa koma) yang valid.")
 
 # === FUNGSI BANTUAN UNTUK OTOMATISASI JURNAL UMUM ===
-def catat_jurnal(cursor, tanggal, account_code, keterangan, debit, kredit):
+def catat_jurnal(cursor, tanggal, account_code, keterangan, debit, kredit, cabang_override=None):
     if debit == 0 and kredit == 0:
         return
-    try:
-        cabang = session.get('cabang', 'GAS') if session else 'GAS'
-    except Exception:
-        cabang = 'GAS'
+        
+    cabang = cabang_override
+    if not cabang:
+        try:
+            cabang = session.get('cabang', 'GAS') if session else 'GAS'
+        except Exception:
+            cabang = 'GAS'
         
     cursor.execute("SELECT id FROM coa WHERE account_code = %s", (account_code,))
     coa = cursor.fetchone()
@@ -85,3 +88,32 @@ def terbilang(n):
         elif x < 1000000000000: return (bilang(x // 1000000000) + " Miliar " + bilang(x % 1000000000)).strip()
         else: return str(x)
     return bilang(n)
+
+# === FUNGSI BANTUAN UNTUK KALKULASI DENDA KETERLAMBATAN ===
+def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda_db, angsuran_denda, denda_aktif=True):
+    if not jatuh_tempo or not denda_aktif:
+        return 0, 0.0
+        
+    today = datetime.now().date()
+    
+    # Konversi string ke date
+    if isinstance(jatuh_tempo, str):
+        jatuh_tempo = datetime.strptime(jatuh_tempo[:10], '%Y-%m-%d').date()
+    if isinstance(tgl_bayar, str) and tgl_bayar:
+        tgl_bayar = datetime.strptime(tgl_bayar[:10], '%Y-%m-%d').date()
+        
+    base_date = jatuh_tempo
+    if tgl_bayar and tgl_bayar > jatuh_tempo:
+        base_date = tgl_bayar
+        
+    od_hari = max((today - base_date).days, 0)
+    
+    sisa_p = float(tagihan_pokok or 0) - float(angsuran_pokok or 0)
+    sisa_m = float(tagihan_margin or 0) - float(angsuran_margin or 0)
+    
+    if sisa_p <= 0.01 and sisa_m <= 0.01:
+        d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0)
+    else:
+        d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.005 * od_hari)
+        
+    return od_hari, max(0, d_kalk)

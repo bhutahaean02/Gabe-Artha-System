@@ -331,9 +331,22 @@ def get_anggota_detail(no_anggota):
         for h in histori_transaksi:
             if hasattr(h.get('tanggal'), 'isoformat'): h['tanggal'] = str(h['tanggal'])
 
+        # 6. Histori Simpanan
+        cursor.execute("""
+            SELECT j.id, j.tanggal, c.account_name, j.keterangan, j.debit, j.kredit 
+            FROM jurnal_umum j
+            JOIN coa c ON j.coa_id = c.id 
+            WHERE j.keterangan LIKE %s AND c.account_code IN ('3101', '3102')
+            ORDER BY j.tanggal DESC, j.id DESC
+        """, ('%' + nama_anggota + '%',))
+        histori_simpanan = cursor.fetchall()
+        for h in histori_simpanan:
+            if hasattr(h.get('tanggal'), 'isoformat'): h['tanggal'] = str(h['tanggal'])
+
         return jsonify({'status': 'success', 'data': {
             'identitas': identitas, 'simpanan': simpanan, 'tagihan_utama': tagihan_utama,
-            'tagihan_urgent': tagihan_urgent, 'histori_transaksi': histori_transaksi
+            'tagihan_urgent': tagihan_urgent, 'histori_transaksi': histori_transaksi,
+            'histori_simpanan': histori_simpanan
         }}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500

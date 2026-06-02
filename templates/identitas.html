@@ -249,7 +249,7 @@
                     
                     <!-- 2. Simpanan -->
                     <div class="tab-pane fade" id="tab-simpanan">
-                        <div class="row text-center g-3">
+                        <div class="row text-center g-3 mb-4">
                             <div class="col-md-4">
                                 <div class="card border-primary border-2">
                                     <div class="card-header bg-primary text-white fw-bold">Simpanan Pokok</div>
@@ -268,6 +268,22 @@
                                     <div class="card-body"><h4 class="mb-0 text-info" id="detTotalSimpanan">Rp 0</h4></div>
                                 </div>
                             </div>
+                        </div>
+                        <h6 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Histori Transaksi Simpanan</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Jenis Simpanan</th>
+                                        <th>Keterangan</th>
+                                        <th class="text-end">Masuk</th>
+                                        <th class="text-end">Keluar</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyDetailSimpanan">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -626,7 +642,7 @@
         let btnPernyataan = `<a href="/api/cetak_pernyataan/${firstRow.no_anggota}/${tgl_cair}" target="_blank" class="btn btn-sm btn-info text-white"><i class="fa-solid fa-file-signature me-1"></i> Surat Pernyataan</a>`;
 
         let totTagPokok = 0, totTagMargin = 0, totTagDenda = 0;
-        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0;
+        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0, totAngEDC = 0;
         let currentBakiDebet = besar_pinjaman;
         
         const rpStr = (val) => Number(val).toLocaleString('id-ID');
@@ -637,7 +653,7 @@
             <td class="text-start">PENCAIRAN ANGGOTA BARU AN. ${nama}</td>
             <td class="text-end">${rpStr(besar_pinjaman)}</td>
             <td>${bunga_persen}</td>
-            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
             <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
             <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
             <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
@@ -651,6 +667,7 @@
             let angPokok = Number(row.angsuran_pokok) || 0;
             let angMargin = Number(row.angsuran_margin) || 0;
             let angDenda = Number(row.angsuran_denda) || 0;
+            let edcVal = parseFloat(row.edc) || 0;
             
             let tagDendaGross = tgkDenda + angDenda;
             
@@ -661,6 +678,7 @@
             totAngPokok += angPokok;
             totAngMargin += angMargin;
             totAngDenda += angDenda;
+            totAngEDC += edcVal;
             
             currentBakiDebet -= angPokok;
             
@@ -694,7 +712,7 @@
                 <td class="text-end">0</td>
                 <td>0</td>
                 <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
-                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td>
+                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td><td class="text-end text-success">${rpStr(edcVal)}</td>
                 <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
                 <td class="text-end text-danger">${rpStr(sisaPokokRow)}</td><td class="text-end text-danger">${rpStr(sisaMarginRow)}</td><td class="text-end text-danger">${rpStr(sisaDendaRow)}</td>
             </tr>`;
@@ -738,25 +756,26 @@
             <div class="table-responsive">
                 <table class="table table-bordered table-sm align-middle text-center" style="white-space: nowrap;">
                     <thead class="table-light align-middle">
-                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="3">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
-                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
+                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="4">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
+                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>EDC</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
                     </thead>
                     <tbody>${tableRows}</tbody>
                 </table>
             </div>
             
             <div class="row fw-bold bg-light p-2 mt-2 border rounded mx-0">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="d-flex justify-content-between"><span>Total Tagihan Pokok</span><span>: ${formatRp(totTagPokok)}</span></div>
                     <div class="d-flex justify-content-between"><span>Total Tagihan Margin</span><span>: ${formatRp(totTagMargin)}</span></div>
                     <div class="d-flex justify-content-between"><span>Total Tagihan Denda</span><span>: ${formatRp(totTagDenda)}</span></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Pokok</span><span>: ${formatRp(totAngPokok)}</span></div>
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Margin</span><span>: ${formatRp(totAngMargin)}</span></div>
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Denda</span><span>: ${formatRp(totAngDenda)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran EDC</span><span>: ${formatRp(totAngEDC)}</span></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Pokok</span><span>: ${formatRp(totSisaPokok)}</span></div>
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Margin</span><span>: ${formatRp(totSisaMargin)}</span></div>
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Denda</span><span>: ${formatRp(totSisaDenda)}</span></div>
@@ -784,7 +803,7 @@
         let btnBatalPencairan = `<button onclick="batalPencairan('urgent', '${identitas.no_anggota}', '${tgl_cair}')" class="btn btn-sm btn-danger text-white"><i class="fa-solid fa-trash me-1"></i> Batal Pencairan Ini</button>`;
 
         let totTagPokok = 0, totTagMargin = 0, totTagDenda = 0;
-        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0;
+        let totAngPokok = 0, totAngMargin = 0, totAngDenda = 0, totAngEDC = 0;
         let currentBakiDebet = besar_pinjaman;
         
         const rpStr = (val) => Number(val).toLocaleString('id-ID');
@@ -795,7 +814,7 @@
             <td class="text-start">PENCAIRAN DANA URGENT AN. ${nama}</td>
             <td class="text-end">${rpStr(besar_pinjaman)}</td>
             <td>-</td>
-            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
+            <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
             <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
             <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
             <td class="text-end">0</td><td class="text-end">0</td><td class="text-end">0</td>
@@ -809,6 +828,7 @@
             let angPokok = Number(row.angsuran_pokok) || 0;
             let angMargin = Number(row.angsuran_margin) || 0;
             let angDenda = Number(row.angsuran_denda) || 0;
+            let edcVal = parseFloat(row.edc) || 0;
             
             let tagDendaGross = tgkDenda + angDenda;
             
@@ -819,6 +839,7 @@
             totAngPokok += angPokok;
             totAngMargin += angMargin;
             totAngDenda += angDenda;
+            totAngEDC += edcVal;
             
             currentBakiDebet -= angPokok;
             
@@ -852,7 +873,7 @@
                 <td class="text-end">0</td>
                 <td>-</td>
                 <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tgkDenda)}</td>
-                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td>
+                <td class="text-end text-success">${rpStr(angPokok)}</td><td class="text-end text-success">${rpStr(angMargin)}</td><td class="text-end text-success">${rpStr(angDenda)}</td><td class="text-end text-success">${rpStr(edcVal)}</td>
                 <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
                 <td class="text-end text-danger">${rpStr(sisaPokokRow)}</td><td class="text-end text-danger">${rpStr(sisaMarginRow)}</td><td class="text-end text-danger">${rpStr(sisaDendaRow)}</td>
             </tr>`;
@@ -896,25 +917,26 @@
             <div class="table-responsive">
                 <table class="table table-bordered table-sm align-middle text-center" style="white-space: nowrap;">
                     <thead class="table-light align-middle">
-                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="3">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
-                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
+                        <tr><th rowspan="2">No</th><th rowspan="2">Tgl Trans</th><th rowspan="2">Uraian</th><th rowspan="2">Realisasi</th><th rowspan="2">Suku<br>Bunga</th><th colspan="3">Tagihan / Jadwal Angsuran</th><th colspan="4">Angsuran Dibayar</th><th rowspan="2">Baki Debet</th><th colspan="3">Tunggakan</th></tr>
+                        <tr><th>Pokok</th><th>Margin</th><th>Tag. Denda</th><th>Pokok</th><th>Margin</th><th>Denda</th><th>EDC</th><th>Pokok</th><th>Margin</th><th>Tgk. Denda</th></tr>
                     </thead>
                     <tbody>${tableRows}</tbody>
                 </table>
             </div>
             
             <div class="row fw-bold bg-light p-2 mt-2 border rounded mx-0">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="d-flex justify-content-between"><span>Total Tagihan Pokok</span><span>: ${formatRp(totTagPokok)}</span></div>
                     <div class="d-flex justify-content-between"><span>Total Tagihan Margin</span><span>: ${formatRp(totTagMargin)}</span></div>
                     <div class="d-flex justify-content-between"><span>Total Tagihan Denda</span><span>: ${formatRp(totTagDenda)}</span></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Pokok</span><span>: ${formatRp(totAngPokok)}</span></div>
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Margin</span><span>: ${formatRp(totAngMargin)}</span></div>
                     <div class="d-flex justify-content-between text-success"><span>Total Angsuran Denda</span><span>: ${formatRp(totAngDenda)}</span></div>
+                    <div class="d-flex justify-content-between text-success"><span>Total Angsuran EDC</span><span>: ${formatRp(totAngEDC)}</span></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Pokok</span><span>: ${formatRp(totSisaPokok)}</span></div>
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Margin</span><span>: ${formatRp(totSisaMargin)}</span></div>
                     <div class="d-flex justify-content-between text-danger"><span>Total Sisa Denda</span><span>: ${formatRp(totSisaDenda)}</span></div>
@@ -972,6 +994,19 @@
                     document.getElementById('detSimpananWajib').innerText = 'Rp 0';
                     document.getElementById('detTotalSimpanan').innerText = 'Rp 0';
                 }
+                
+                let tbodySimp = document.getElementById('tbodyDetailSimpanan'); tbodySimp.innerHTML = '';
+                if(d.histori_simpanan && d.histori_simpanan.length > 0) {
+                    d.histori_simpanan.forEach(his => {
+                        tbodySimp.innerHTML += `<tr>
+                            <td>${his.tanggal}</td>
+                            <td><span class="badge bg-info text-dark">${his.account_name}</span></td>
+                            <td class="small">${his.keterangan}</td>
+                            <td class="text-end text-success">${his.kredit > 0 ? formatRp(his.kredit) : '-'}</td>
+                            <td class="text-end text-danger">${his.debit > 0 ? formatRp(his.debit) : '-'}</td>
+                        </tr>`;
+                    });
+                } else { tbodySimp.innerHTML = `<tr><td colspan="5" class="text-center text-muted">Belum ada transaksi simpanan.</td></tr>`; }
 
                 // 3. Render Lampiran Tagihan Multiguna
                 let containerMultiguna = document.getElementById('containerMultiguna'); containerMultiguna.innerHTML = '';
@@ -1298,6 +1333,18 @@
         let jenis = document.getElementById('sisa_jenis').value;
         let namaAnggota = document.getElementById('detailNamaAnggota').innerText.split('(')[0].trim();
         
+        let bPokok = parseFloat(document.getElementById('inputSisaPokok').value) || 0;
+        let bMargin = parseFloat(document.getElementById('inputSisaMargin').value) || 0;
+        let maxP = parseFloat(document.getElementById('inputSisaPokok').max) || 0;
+        let maxM = parseFloat(document.getElementById('inputSisaMargin').max) || 0;
+
+        if (bPokok > maxP || bMargin > maxM) {
+            alert('Nominal pembayaran melebihi sisa tagihan! Silakan periksa kembali.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Proses Pembayaran';
+            return;
+        }
+
         let payload = {
             no_anggota: document.getElementById('sisa_no_anggota').value,
             nama_anggota: namaAnggota,
