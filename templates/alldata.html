@@ -1,6 +1,5 @@
-{% extends 'base.html' %}
-
-{% block title %}Data Identitas - Koperasi{% endblock %}
+{# === MENGHAPUS DUPLIKASI KODE IDENTITAS ===
+{% block title_ignore %}Data Identitas - Koperasi{% endblock %}
 {% block page_title %}Manajemen Data Anggota{% endblock %}
 
 {% block content %}
@@ -215,6 +214,71 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+#}
+{% extends 'base.html' %}
+
+{% block title %}All Data (Pivot) - Koperasi{% endblock %}
+{% block page_title %}Pusat Data Integrasi & Pivot Excel{% endblock %}
+
+{% block content %}
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
+        <h6 class="mb-0 text-success fw-bold"><i class="fa-solid fa-database me-2"></i> All Data Center</h6>
+        <div>
+            <button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="exportToExcel()"><i class="fa-solid fa-file-excel me-1"></i> Export to Excel (Pivot Ready)</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="alert alert-info m-3 border-0 shadow-sm small">
+            <i class="fa-solid fa-circle-info me-1"></i> Data di bawah ini adalah format <i>Flat Table</i> yang berisi seluruh histori transaksi per jadwal tagihan, identitas, dan simpanan. Dirancang khusus untuk mempermudah Manager dalam membuat <b>Pivot Table</b> di Excel.
+        </div>
+        
+        <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+            <table class="table table-hover table-bordered align-middle mb-0 text-nowrap" id="tableAllData" style="font-size: 0.8rem;">
+                <thead class="table-dark text-center align-middle" style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th rowspan="2">No Anggota</th>
+                        <th rowspan="2">No Transaksi</th>
+                        <th rowspan="2">Tgl Jatuh Tempo</th>
+                        
+                        <th colspan="23">Data Identitas Anggota</th>
+                        <th colspan="2">Simpanan</th>
+                        
+                        <th colspan="9" class="bg-success">Pinjaman Multiguna</th>
+                        <th colspan="9" class="bg-info text-dark">Pinjaman Tempo</th>
+                        <th colspan="9" class="bg-warning text-dark">Dana Urgent Gaji</th>
+                        <th colspan="9" class="bg-danger">Dana Urgent THR</th>
+                    </tr>
+                    <tr>
+                        <!-- Identitas -->
+                        <th>Nama Anggota</th><th>Cabang</th><th>KOL</th><th>Kriteria</th><th>Marketing</th>
+                        <th>No Telp</th><th>NIK KTP</th><th>NIK KK</th><th>Email</th>
+                        <th>Tempat Tinggal</th><th>Alamat KTP</th><th>Alamat Tagih</th>
+                        <th>PT / Instansi</th><th>Status Karyawan</th><th>Jabatan</th>
+                        <th>Awal Kerja</th><th>Lama Kerja</th><th>Akhir Kerja</th>
+                        <th>No JMO</th><th>Status JMO</th>
+                        <th>Bank</th><th>No Rek</th>
+                        <th>Penanggung Jawab</th>
+                        
+                        <!-- Simpanan -->
+                        <th>Wajib</th><th>Pokok</th>
+                        
+                        <!-- Multiguna -->
+                        <th class="bg-success text-white">Status</th><th class="bg-success text-white">Tag. Pokok</th><th class="bg-success text-white">Tag. Margin</th><th class="bg-success text-white">Denda Aktif</th><th class="bg-success text-white">Angs. Pokok</th><th class="bg-success text-white">Angs. Margin</th><th class="bg-success text-white">Angs. Denda</th><th class="bg-success text-white">Tgk. Pokok</th><th class="bg-success text-white">Tgk. Margin</th>
+                        <!-- Tempo -->
+                        <th class="bg-info text-dark">Status</th><th class="bg-info text-dark">Tag. Pokok</th><th class="bg-info text-dark">Tag. Margin</th><th class="bg-info text-dark">Denda Aktif</th><th class="bg-info text-dark">Angs. Pokok</th><th class="bg-info text-dark">Angs. Margin</th><th class="bg-info text-dark">Angs. Denda</th><th class="bg-info text-dark">Tgk. Pokok</th><th class="bg-info text-dark">Tgk. Margin</th>
+                        <!-- Gaji -->
+                        <th class="bg-warning text-dark">Status</th><th class="bg-warning text-dark">Tag. Pokok</th><th class="bg-warning text-dark">Tag. Margin</th><th class="bg-warning text-dark">Denda Aktif</th><th class="bg-warning text-dark">Angs. Pokok</th><th class="bg-warning text-dark">Angs. Margin</th><th class="bg-warning text-dark">Angs. Denda</th><th class="bg-warning text-dark">Tgk. Pokok</th><th class="bg-warning text-dark">Tgk. Margin</th>
+                        <!-- THR -->
+                        <th class="bg-danger text-white">Status</th><th class="bg-danger text-white">Tag. Pokok</th><th class="bg-danger text-white">Tag. Margin</th><th class="bg-danger text-white">Denda Aktif</th><th class="bg-danger text-white">Angs. Pokok</th><th class="bg-danger text-white">Angs. Margin</th><th class="bg-danger text-white">Angs. Denda</th><th class="bg-danger text-white">Tgk. Pokok</th><th class="bg-danger text-white">Tgk. Margin</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyAllData">
+                    <tr><td colspan="62" class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Mengumpulkan dan memproses semua data...</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -510,6 +574,91 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script>
+    let rawData = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/alldata')
+        .then(res => res.json())
+        .then(res => {
+            const tbody = document.getElementById('tbodyAllData');
+            tbody.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                rawData = res.data;
+                const safeVal = (v) => (v && v !== 'None' && v !== 'null') ? v : '';
+                const rp = (v) => v ? Number(v).toLocaleString('id-ID') : '0';
+
+                let html = '';
+                const renderLimit = Math.min(rawData.length, 300); 
+                
+                for(let i=0; i<renderLimit; i++) {
+                    let r = rawData[i];
+                    html += `<tr>
+                        <td class="fw-bold">${safeVal(r.no_anggota)}</td><td>${safeVal(r.no_transaksi)}</td><td class="text-danger fw-bold">${safeVal(r.jatuh_tempo)}</td>
+                        <td>${safeVal(r.nama_anggota)}</td><td>${safeVal(r.cabang)}</td><td>${safeVal(r.kol)}</td><td>${safeVal(r.kriteria)}</td><td>${safeVal(r.marketing)}</td>
+                        <td>${safeVal(r.no_telp)}</td><td>${safeVal(r.nik_ktp)}</td><td>${safeVal(r.nik_kk)}</td><td>${safeVal(r.email)}</td>
+                        <td>${safeVal(r.status_tempat_tinggal)}</td><td>${safeVal(r.alamat_ktp)}</td><td>${safeVal(r.alamat_tagih)}</td>
+                        <td>${safeVal(r.pt_instansi)}</td><td>${safeVal(r.status_karyawan)}</td><td>${safeVal(r.jabatan)}</td>
+                        <td>${safeVal(r.awal_bekerja)}</td><td>${safeVal(r.lama_kerja)}</td><td>${safeVal(r.akhir_bekerja)}</td>
+                        <td>${safeVal(r.no_jmo)}</td><td>${safeVal(r.status_jmo)}</td><td>${safeVal(r.bank)}</td><td>${safeVal(r.no_rek)}</td>
+                        <td>${safeVal(r.nama_penanggung_jawab)} - ${safeVal(r.no_telp_penanggung_jawab)}</td>
+                        
+                        <td class="text-end fw-bold text-success">${rp(r.simpanan_wajib)}</td><td class="text-end fw-bold text-success">${rp(r.simpanan_pokok)}</td>
+                        
+                        <td class="text-center">${safeVal(r.MG_Status)}</td><td class="text-end">${rp(r.MG_Tagihan_Pokok)}</td><td class="text-end">${rp(r.MG_Tagihan_Margin)}</td><td class="text-end text-danger">${rp(r.MG_Denda_Berjalan)}</td><td class="text-end">${rp(r.MG_Angsuran_Pokok)}</td><td class="text-end">${rp(r.MG_Angsuran_Margin)}</td><td class="text-end">${rp(r.MG_Angsuran_Denda)}</td><td class="text-end text-warning">${rp(r.MG_Tunggakan_Pokok)}</td><td class="text-end text-warning">${rp(r.MG_Tunggakan_Margin)}</td>
+                        <td class="text-center">${safeVal(r.TM_Status)}</td><td class="text-end">${rp(r.TM_Tagihan_Pokok)}</td><td class="text-end">${rp(r.TM_Tagihan_Margin)}</td><td class="text-end text-danger">${rp(r.TM_Denda_Berjalan)}</td><td class="text-end">${rp(r.TM_Angsuran_Pokok)}</td><td class="text-end">${rp(r.TM_Angsuran_Margin)}</td><td class="text-end">${rp(r.TM_Angsuran_Denda)}</td><td class="text-end text-warning">${rp(r.TM_Tunggakan_Pokok)}</td><td class="text-end text-warning">${rp(r.TM_Tunggakan_Margin)}</td>
+                        <td class="text-center">${safeVal(r.GJ_Status)}</td><td class="text-end">${rp(r.GJ_Tagihan_Pokok)}</td><td class="text-end">${rp(r.GJ_Tagihan_Margin)}</td><td class="text-end text-danger">${rp(r.GJ_Denda_Berjalan)}</td><td class="text-end">${rp(r.GJ_Angsuran_Pokok)}</td><td class="text-end">${rp(r.GJ_Angsuran_Margin)}</td><td class="text-end">${rp(r.GJ_Angsuran_Denda)}</td><td class="text-end text-warning">${rp(r.GJ_Tunggakan_Pokok)}</td><td class="text-end text-warning">${rp(r.GJ_Tunggakan_Margin)}</td>
+                        <td class="text-center">${safeVal(r.THR_Status)}</td><td class="text-end">${rp(r.THR_Tagihan_Pokok)}</td><td class="text-end">${rp(r.THR_Tagihan_Margin)}</td><td class="text-end text-danger">${rp(r.THR_Denda_Berjalan)}</td><td class="text-end">${rp(r.THR_Angsuran_Pokok)}</td><td class="text-end">${rp(r.THR_Angsuran_Margin)}</td><td class="text-end">${rp(r.THR_Angsuran_Denda)}</td><td class="text-end text-warning">${rp(r.THR_Tunggakan_Pokok)}</td><td class="text-end text-warning">${rp(r.THR_Tunggakan_Margin)}</td>
+                    </tr>`;
+                }
+                
+                if (rawData.length > renderLimit) {
+                    html += `<tr><td colspan="62" class="text-center py-3 bg-light text-primary fw-bold">... Ditampilkan ${renderLimit} dari ${rawData.length} baris. Klik tombol 'Export to Excel' di atas untuk melihat dan mengunduh seluruh datanya. ...</td></tr>`;
+                }
+                
+                tbody.innerHTML = html;
+            } else {
+                tbody.innerHTML = '<tr><td colspan="62" class="text-center py-5 text-muted">Belum ada data tersedia.</td></tr>';
+            }
+        });
+    });
+
+    function exportToExcel() {
+        if(rawData.length === 0) return alert("Belum ada data untuk diexport!");
+        showLoading();
+        
+        setTimeout(() => {
+            const excelData = rawData.map(r => ({
+                "No Anggota": r.no_anggota, "No Transaksi": r.no_transaksi, "Kategori Data Pinjaman": r.kategori_pinjaman,
+                "Tanggal Jatuh Tempo": r.jatuh_tempo, "Tanggal Pencairan": r.tgl_pencairan, "Nama Anggota": r.nama_anggota,
+                "Cabang": r.cabang, "KOL": r.kol, "Kriteria": r.kriteria, "Marketing": r.marketing, "No Telp": r.no_telp,
+                "NIK KTP": r.nik_ktp, "NIK KK": r.nik_kk, "Email": r.email, "Status Tempat Tinggal": r.status_tempat_tinggal,
+                "Alamat KTP": r.alamat_ktp, "Alamat Tagih": r.alamat_tagih, "PT / Instansi": r.pt_instansi,
+                "Status Karyawan": r.status_karyawan, "Jabatan": r.jabatan, "Awal Kerja": r.awal_bekerja,
+                "Lama Kerja": r.lama_kerja, "Akhir Kerja": r.akhir_bekerja, "No JMO": r.no_jmo, "Status JMO": r.status_jmo,
+                "Bank": r.bank, "No Rek": r.no_rek, "Penanggung Jawab": r.nama_penanggung_jawab, "Telp Penanggung Jawab": r.no_telp_penanggung_jawab,
+                "Simpanan Wajib": Number(r.simpanan_wajib), "Simpanan Pokok": Number(r.simpanan_pokok),
+                
+                "MG Status": r.MG_Status, "MG Tagihan Pokok": Number(r.MG_Tagihan_Pokok), "MG Tagihan Margin": Number(r.MG_Tagihan_Margin), "MG Denda Aktif": Number(r.MG_Denda_Berjalan), "MG Angsuran Pokok": Number(r.MG_Angsuran_Pokok), "MG Angsuran Margin": Number(r.MG_Angsuran_Margin), "MG Angsuran Denda": Number(r.MG_Angsuran_Denda), "MG Tunggakan Pokok": Number(r.MG_Tunggakan_Pokok), "MG Tunggakan Margin": Number(r.MG_Tunggakan_Margin),
+                "Tempo Status": r.TM_Status, "Tempo Tagihan Pokok": Number(r.TM_Tagihan_Pokok), "Tempo Tagihan Margin": Number(r.TM_Tagihan_Margin), "Tempo Denda Aktif": Number(r.TM_Denda_Berjalan), "Tempo Angsuran Pokok": Number(r.TM_Angsuran_Pokok), "Tempo Angsuran Margin": Number(r.TM_Angsuran_Margin), "Tempo Angsuran Denda": Number(r.TM_Angsuran_Denda), "Tempo Tunggakan Pokok": Number(r.TM_Tunggakan_Pokok), "Tempo Tunggakan Margin": Number(r.TM_Tunggakan_Margin),
+                "Gaji Status": r.GJ_Status, "Gaji Tagihan Pokok": Number(r.GJ_Tagihan_Pokok), "Gaji Tagihan Margin": Number(r.GJ_Tagihan_Margin), "Gaji Denda Aktif": Number(r.GJ_Denda_Berjalan), "Gaji Angsuran Pokok": Number(r.GJ_Angsuran_Pokok), "Gaji Angsuran Margin": Number(r.GJ_Angsuran_Margin), "Gaji Angsuran Denda": Number(r.GJ_Angsuran_Denda), "Gaji Tunggakan Pokok": Number(r.GJ_Tunggakan_Pokok), "Gaji Tunggakan Margin": Number(r.GJ_Tunggakan_Margin),
+                "THR Status": r.THR_Status, "THR Tagihan Pokok": Number(r.THR_Tagihan_Pokok), "THR Tagihan Margin": Number(r.THR_Tagihan_Margin), "THR Denda Aktif": Number(r.THR_Denda_Berjalan), "THR Angsuran Pokok": Number(r.THR_Angsuran_Pokok), "THR Angsuran Margin": Number(r.THR_Angsuran_Margin), "THR Angsuran Denda": Number(r.THR_Angsuran_Denda), "THR Tunggakan Pokok": Number(r.THR_Tunggakan_Pokok), "THR Tunggakan Margin": Number(r.THR_Tunggakan_Margin)
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "ALL_DATA_PIVOT");
+            
+            let tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            let localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 19).replace(/:/g, "-");
+            
+            XLSX.writeFile(wb, `GABE_ARTHA_ALLDATA_${localISOTime}.xlsx`);
+            hideLoading();
+        }, 500);
+    }
+</script>
 <script>
     // FUNGSI TOGGLE DENDA (MODE MIGRASI)
     document.addEventListener('DOMContentLoaded', () => {

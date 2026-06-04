@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}Laporan Tunggakan Dana Urgent - GAS{% endblock %}
+{% block page_title %}Laporan Tunggakan Dana Urgent (Gaji & THR){% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm metric-card card-danger-grad h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-users metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Total Anggota Macet</h6>
+                <h4 class="fw-bold mb-0" id="summary_anggota">0 Anggota</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm metric-card card-gold h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-clock-rotate-left metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Total Tunggakan Denda</h6>
+                <h4 class="fw-bold mb-0" id="summary_denda">Rp 0</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm metric-card card-dark h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-sack-dollar metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Estimasi Total Tagihan</h6>
+                <h4 class="fw-bold mb-0" id="summary_tagihan">Rp 0</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
+        <h6 class="mb-0 text-danger fw-bold"><i class="fa-solid fa-bolt me-2"></i> Data Macet Dana Urgent</h6>
+        <div class="d-flex align-items-center mt-2 mt-md-0">
+            <input type="text" id="searchInput" class="form-control form-control-sm me-2 border-secondary" placeholder="Cari Nama / No Anggota..." style="width: 250px;">
+            <button class="btn btn-sm btn-outline-success fw-bold text-nowrap" onclick="exportExcel()"><i class="fa-solid fa-file-excel me-1"></i> Export Excel</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+            <table class="table table-hover table-striped align-middle mb-0" id="tableTunggakan">
+                <thead class="table-dark text-center" style="position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                        <th>NO</th>
+                        <th>NO ANGGOTA</th>
+                        <th class="text-start">NAMA ANGGOTA</th>
+                        <th>NO TELP</th>
+                        <th>JENIS URGENT</th>
+                        <th>TGL JATUH TEMPO</th>
+                        <th class="bg-danger">HARI TELAT (OD)</th>
+                        <th>SISA POKOK</th>
+                        <th>SISA MARGIN</th>
+                        <th class="bg-danger">DENDA BERJALAN</th>
+                        <th class="bg-primary text-white">TOTAL TAGIHAN</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyTunggakan">
+                    <tr><td colspan="11" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data tunggakan...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const formatRp = (angka) => (angka) ? 'Rp ' + Number(angka).toLocaleString('id-ID') : 'Rp 0';
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/laporan_tunggakan_urgent').then(res => res.json()).then(res => {
+            const tbody = document.getElementById('tbodyTunggakan');
+            tbody.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                document.getElementById('summary_anggota').innerText = `${res.summary.total_anggota} Anggota`;
+                document.getElementById('summary_denda').innerText = formatRp(res.summary.total_denda);
+                document.getElementById('summary_tagihan').innerText = formatRp(res.summary.total_tunggakan);
+
+                res.data.forEach((row, i) => {
+                    tbody.innerHTML += `<tr>
+                        <td class="text-center">${i + 1}</td>
+                        <td class="text-center fw-bold text-primary">${row.no_anggota}</td>
+                        <td class="fw-bold">${row.nama_anggota}<br><small class="text-muted fw-normal">${row.pt_instansi || '-'}</small></td>
+                        <td class="text-center">${row.no_telp || '-'}</td>
+                        <td class="text-center"><span class="badge bg-dark text-warning">${row.jenis_dana_urgent}</span></td>
+                        <td class="text-center fw-bold">${row.tanggal_jatuh_tempo}</td>
+                        <td class="text-center text-danger fw-bold bg-danger bg-opacity-10">${row.od_hari}</td>
+                        <td class="text-end">${formatRp(row.sisa_pokok)}</td>
+                        <td class="text-end">${formatRp(row.sisa_margin)}</td>
+                        <td class="text-end text-danger fw-bold bg-danger bg-opacity-10">${formatRp(row.tunggakan_denda)}</td>
+                        <td class="text-end fw-bold text-primary">${formatRp(row.total_tagihan)}</td>
+                    </tr>`;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Hebat! Tidak ada anggota yang menunggak tagihan Dana Urgent.</td></tr>';
+            }
+        }).catch(err => console.error(err));
+    });
+
+    // Fitur Live Search
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        document.querySelectorAll('#tbodyTunggakan tr').forEach(row => row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none');
+    });
+
+    // Fitur Export Excel
+    function exportExcel() {
+        window.open('data:application/vnd.ms-excel,' + encodeURIComponent(document.getElementById('tableTunggakan').outerHTML));
+    }
+</script>
+{% endblock %}

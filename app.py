@@ -8,8 +8,9 @@ from routes_pages import pages_bp
 from api_anggota import api_anggota_bp
 from api_transaksi import api_transaksi_bp
 from api_akuntansi_laporan import api_akuntansi_laporan_bp
+from api_migrasi import api_migrasi_bp
 from config import SECRET_KEY
-from db import close_db_connection
+from db import close_db_connection, init_db
 
 app = Flask(__name__)
 
@@ -47,9 +48,13 @@ app.register_blueprint(pages_bp)
 app.register_blueprint(api_anggota_bp)
 app.register_blueprint(api_transaksi_bp)
 app.register_blueprint(api_akuntansi_laporan_bp)
+app.register_blueprint(api_migrasi_bp)
 
 # Daftarkan fungsi teardown untuk menutup DB otomatis setelah request selesai (menghindari memory leak)
 app.teardown_appcontext(close_db_connection)
+
+# Inisialisasi database satu kali saat aplikasi berjalan (menghapus beban DDL di API backend)
+init_db(app)
 
 if __name__ == '__main__':
     # Tambahkan host='0.0.0.0' agar server listen ke semua IP (bukan hanya localhost)

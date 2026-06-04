@@ -78,6 +78,115 @@ def get_anggota_list():
         return jsonify({'status': 'error', 'message': str(e)}), 500
     finally:
         cursor.close()
+
+# === API: ALL DATA PIVOT (DASHBOARD & EXCEL) ===
+@api_bp.route('/api/alldata', methods=['GET'])
+def get_alldata_pivot():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cabang = session.get('cabang', 'GAS')
+    role = session.get('role')
+    
+    try:
+        # Ambil Data Anggota & Simpanan
+        query_id = "SELECT i.*, s.simpanan_pokok, s.simpanan_wajib FROM identitas i LEFT JOIN simpanan s ON i.no_anggota = s.nomor_anggota"
+        if role != 'Super Admin':
+            query_id += f" WHERE i.cabang = '{cabang}'"
+        cursor.execute(query_id)
+        members = cursor.fetchall()
+        member_dict = {m['no_anggota']: m for m in members}
+        
+        # Ambil Data Angsuran Multiguna & Tempo
+        cursor.execute("SELECT id, no_anggota, jenis_pinjaman as kategori_pinjaman, jatuh_tempo, tgl_pencairan, status, tagihan_pokok, tagihan_margin, tagihan_denda, angsuran_pokok, angsuran_margin, angsuran_denda, tunggakan_pokok, tunggakan_margin, tunggakan_denda, od_hari FROM angsuran_multiguna_tempo")
+        amts = cursor.fetchall()
+
+        # Ambil Data Angsuran Dana Urgent
+        cursor.execute("SELECT id, no_anggota, jenis_dana_urgent as kategori_pinjaman, tanggal_jatuh_tempo as jatuh_tempo, tgl_pencairan, status, tagihan_pokok, tagihan_margin, tagihan_denda, angsuran_pokok, angsuran_margin, angsuran_denda, tunggakan_pokok, tunggakan_margin, tunggakan_denda, od_hari FROM angsuran_dana_urgent")
+        adus = cursor.fetchall()
+
+        all_trans = amts + adus
+        
+        cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
+        cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
+        p_row = cursor.fetchone()
+        denda_aktif = (p_row['nilai'] == '1') if p_row else True
+
+        today = datetime.now().date()
+        result = []
+
+        for t in all_trans:
+            no_anggota = t['no_anggota']
+            if no_anggota not in member_dict:
+                continue
+                
+            m = member_dict[no_anggota]
+            row = {k: v for k, v in m.items()}
+            
+            row['no_transaksi'] = f"{str(t['kategori_pinjaman'])[:3].upper()}-{t['id']}"
+            row['kategori_pinjaman'] = t['kategori_pinjaman']
+            
+            jt = t['jatuh_tempo']
+            if hasattr(jt, 'isoformat') and jt: jt = jt.strftime('%Y-%m-%d')
+            row['jatuh_tempo'] = jt
+            
+            tc = t['tgl_pencairan']
+            if hasattr(tc, 'isoformat') and tc: tc = tc.strftime('%Y-%m-%d')
+            row['tgl_pencairan'] = tc
+            
+            for date_field in ['tgl_lahir', 'awal_bekerja', 'akhir_bekerja']:
+                if row.get(date_field) and hasattr(row[date_field], 'isoformat'):
+                    row[date_field] = row[date_field].strftime('%Y-%m-%d')
+                    
+            tag_p = float(t['tagihan_pokok'] or 0)
+            tag_m = float(t['tagihan_margin'] or 0)
+            ang_p = float(t['angsuran_pokok'] or 0)
+            ang_m = float(t['angsuran_margin'] or 0)
+            ang_d = float(t['angsuran_denda'] or 0)
+            tag_d_db = float(t['tagihan_denda'] or 0)
+            
+            sisa_p = max(0, tag_p - ang_p)
+            sisa_m = max(0, tag_m - ang_m)
+            denda_berjalan = tag_d_db - ang_d
+            
+            if t['status'] == 'BELUM BAYAR':
+                jt_date = t['jatuh_tempo']
+                if isinstance(jt_date, str):
+                    try: jt_date = datetime.strptime(jt_date[:10], '%Y-%m-%d').date()
+                    except: jt_date = None
+                if jt_date:
+                    od_hari = max((today - jt_date).days, 0)
+                    if (sisa_p > 0.01 or sisa_m > 0.01) and denda_aktif:
+                        if t['kategori_pinjaman'] in ['Tempo', 'Gaji', 'THR']: denda_berjalan += (sisa_p * sisa_m) * 0.007 * od_hari
+                        else: denda_berjalan += (sisa_p + sisa_m) * 0.005 * od_hari
+
+            denda_berjalan = max(0, denda_berjalan)
+
+            for prefix in ['MG', 'TM', 'GJ', 'THR']:
+                row[f'{prefix}_Status'] = None
+                row[f'{prefix}_Tagihan_Pokok'] = 0; row[f'{prefix}_Tagihan_Margin'] = 0; row[f'{prefix}_Denda_Berjalan'] = 0
+                row[f'{prefix}_Angsuran_Pokok'] = 0; row[f'{prefix}_Angsuran_Margin'] = 0; row[f'{prefix}_Angsuran_Denda'] = 0
+                row[f'{prefix}_Tunggakan_Pokok'] = 0; row[f'{prefix}_Tunggakan_Margin'] = 0
+
+            kat = t['kategori_pinjaman']
+            px = 'MG' if kat == 'Multiguna' else ('TM' if kat == 'Tempo' else ('GJ' if kat == 'Gaji' else ('THR' if kat == 'THR' else None)))
+
+            if px:
+                row[f'{px}_Status'] = t['status']
+                row[f'{px}_Tagihan_Pokok'] = tag_p; row[f'{px}_Tagihan_Margin'] = tag_m; row[f'{px}_Denda_Berjalan'] = denda_berjalan
+                row[f'{px}_Angsuran_Pokok'] = ang_p; row[f'{px}_Angsuran_Margin'] = ang_m; row[f'{px}_Angsuran_Denda'] = ang_d
+                row[f'{px}_Tunggakan_Pokok'] = sisa_p if t['status'] == 'BELUM BAYAR' else 0
+                row[f'{px}_Tunggakan_Margin'] = sisa_m if t['status'] == 'BELUM BAYAR' else 0
+
+            result.append(row)
+
+        return jsonify({'status': 'success', 'data': result}), 200
+
+    except Exception as e:
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'trace': traceback.format_exc()}), 500
+    finally:
+        cursor.close()
+        conn.close()
         conn.close()
 
 # === API: GENERATE NOMOR ANGGOTA OTOMATIS (Tombol Tongkat Ajaib) ===
@@ -96,6 +205,35 @@ def generate_no_anggota():
     finally:
         cursor.close()
         conn.close()
+
+# === API: MENGAMBIL DATA AUDIT LOGS ===
+@api_bp.route('/api/audit_logs', methods=['GET'])
+def get_audit_logs():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cabang = session.get('cabang', 'GAS')
+    role = session.get('role', 'System')
+    
+    try:
+        # Memastikan tabel sudah dibuat (berjaga-jaga jika dipanggil sebelum ada pembatalan transaksi)
+        cursor.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100), role VARCHAR(50), cabang VARCHAR(50), aksi VARCHAR(255), detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        
+        # --- FITUR PENGHAPUSAN OTOMATIS: Hapus log yang usianya lebih dari 3 bulan ---
+        cursor.execute("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
+        conn.commit()
+
+        if role in ['Super Admin', 'Manager']:
+            cursor.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 1000")
+        else:
+            cursor.execute("SELECT * FROM audit_logs WHERE cabang = %s ORDER BY id DESC LIMIT 1000", (cabang,))
+            
+        data = cursor.fetchall()
+        for row in data:
+            if hasattr(row['created_at'], 'isoformat'): row['created_at'] = str(row['created_at'])
+                
+        return jsonify({'status': 'success', 'data': data}), 200
+    except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally: cursor.close(); conn.close()
 
 # === API: PROSES PENCAIRAN & AUTO-GENERATE JADWAL ANGSURAN ===
 @api_bp.route('/api/pencairan_multiguna', methods=['POST'])
@@ -310,7 +448,8 @@ def proses_pencairan_urgent():
         tgl_pencairan = data.get('tanggal_pencairan_dana_urgent')
         tgl_pembayaran = data.get('tanggal_pembayaran_dana_urgent')
         jumlah_dana_urgent = parse_float(data.get('jumlah_dana_urgent'), 'Jumlah Dana Urgent')
-        margin_dana_urgent = parse_float(data.get('margin_dana_urgent'), 'Margin Dana Urgent')
+        # Margin otomatis 20% dari pokok pinjaman dana urgent
+        margin_dana_urgent = jumlah_dana_urgent * 0.20
         
         query_pencairan = """
             INSERT INTO pencairan_dana_urgent (

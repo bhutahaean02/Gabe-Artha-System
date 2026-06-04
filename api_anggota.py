@@ -278,7 +278,10 @@ def get_anggota_detail(no_anggota):
                     if sisa_p <= 0.01 and sisa_m <= 0.01:
                         d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0)
                     else:
-                        add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
+                        if tag.get('jenis_pinjaman') == 'Tempo':
+                            add_denda = (sisa_p * sisa_m) * 0.007 * od_sisa
+                        else:
+                            add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
                         d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0) + add_denda
                     tag['tunggakan_denda'] = max(0, d_kalk) if denda_aktif else 0
                 except ValueError: pass
@@ -309,7 +312,7 @@ def get_anggota_detail(no_anggota):
                     if sisa_p <= 0.01 and sisa_m <= 0.01:
                         d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0)
                     else:
-                        add_denda = (sisa_p + sisa_m) * 0.005 * od_sisa
+                        add_denda = (sisa_p * sisa_m) * 0.007 * od_sisa
                         d_kalk = float(tag.get('tagihan_denda') or 0) - float(tag['angsuran_denda'] or 0) + add_denda
                     tag['tunggakan_denda'] = max(0, d_kalk) if denda_aktif else 0
                 except ValueError: pass

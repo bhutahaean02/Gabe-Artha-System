@@ -69,7 +69,7 @@
                     <div class="row g-3">
                         <div class="col-md-12">
                             <label class="form-label small fw-bold text-success">Besar Pinjaman (Rp) *</label>
-                            <input type="number" name="besar_pinjaman" id="inputPlafon" class="form-control form-control-lg border-success fw-bold text-success calc-trigger" placeholder="Contoh: 10000000" required>
+                            <input type="text" name="besar_pinjaman" id="inputPlafon" class="form-control form-control-lg border-success fw-bold text-success calc-trigger format-rp" placeholder="Contoh: 10.000.000" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Tenor (Bulan) *</label>
@@ -90,37 +90,38 @@
                         
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Potongan Angsuran</label></div>
-                            <div class="col-7"><input type="number" name="potongan_angsuran" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_angsuran" id="pot_angsuran" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Potongan Dana Urgent</label></div>
-                            <div class="col-7"><input type="number" name="potongan_dana_urgent" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_dana_urgent" id="pot_urgent" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Biaya Jamsostek</label></div>
-                            <div class="col-7"><input type="number" name="biaya_jamsostek" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="biaya_jamsostek" id="pot_jamsostek" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Potongan Simpanan Pokok</label></div>
-                            <div class="col-7"><input type="number" name="potongan_simpanan_pokok" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_simpanan_pokok" id="pot_simpok" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Potongan Administrasi</label></div>
-                            <div class="col-7"><input type="number" name="potongan_adm" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_adm" id="pot_adm" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-5"><label class="small">Potongan Dana Kematian</label></div>
-                            <div class="col-7"><input type="number" name="potongan_dana_kematian" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_dana_kematian" id="pot_kematian" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
                         <div class="row g-2 mb-3 align-items-center">
                             <div class="col-5"><label class="small">Potongan PPAP</label></div>
-                            <div class="col-7"><input type="number" name="potongan_ppap" class="form-control form-control-sm calc-trigger" value="0"></div>
+                            <div class="col-7"><input type="text" name="potongan_ppap" id="pot_ppap" class="form-control form-control-sm calc-trigger format-rp" value="0"></div>
                         </div>
 
                         <!-- TOTAL TERIMA BERSIH -->
                         <div class="p-3 bg-white rounded border border-primary shadow-sm text-center">
                             <label class="text-primary fw-bold text-uppercase mb-1">Total Terima Bersih</label>
-                            <input type="number" name="terima_bersih" id="inputTerimaBersih" class="form-control text-center fs-3 fw-bold bg-white text-primary border-0 p-0" readonly value="0">
+                            <input type="text" id="inputTerimaBersihTampil" class="form-control text-center fs-3 fw-bold bg-white text-primary border-0 p-0" readonly value="Rp 0">
+                            <input type="hidden" name="terima_bersih" id="inputTerimaBersih" value="0">
                         </div>
                     </div>
                 </div>
@@ -158,28 +159,45 @@
         document.getElementById('inputNamaAnggota').value = selectedOption.getAttribute('data-nama');
     });
 
+    function getValInput(id) {
+        let el = document.getElementById(id);
+        if(!el || !el.value) return 0;
+        return parseFloat(el.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
+    }
+
     // 3. Kalkulator Otomatis "Terima Bersih"
     const calcTriggers = document.querySelectorAll('.calc-trigger');
     calcTriggers.forEach(input => {
-        input.addEventListener('input', kalkulasiTerimaBersih);
+        input.addEventListener('input', function() {
+            if(this.classList.contains('format-rp')) {
+                let val = this.value.replace(/[^0-9,]/g, '');
+                if (val) {
+                    let parts = val.split(',');
+                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+                }
+            }
+            kalkulasiTerimaBersih();
+        });
     });
 
     function kalkulasiTerimaBersih() {
-        let plafon = parseFloat(document.getElementById('inputPlafon').value) || 0;
+        let plafon = getValInput('inputPlafon');
         
         // Ambil semua potongan
-        let pot_angsuran = parseFloat(document.getElementsByName('potongan_angsuran')[0].value) || 0;
-        let pot_urgent = parseFloat(document.getElementsByName('potongan_dana_urgent')[0].value) || 0;
-        let jamsostek = parseFloat(document.getElementsByName('biaya_jamsostek')[0].value) || 0;
-        let pot_simpok = parseFloat(document.getElementsByName('potongan_simpanan_pokok')[0].value) || 0;
-        let pot_adm = parseFloat(document.getElementsByName('potongan_adm')[0].value) || 0;
-        let pot_kematian = parseFloat(document.getElementsByName('potongan_dana_kematian')[0].value) || 0;
-        let pot_ppap = parseFloat(document.getElementsByName('potongan_ppap')[0].value) || 0;
+        let pot_angsuran = getValInput('pot_angsuran');
+        let pot_urgent = getValInput('pot_urgent');
+        let jamsostek = getValInput('pot_jamsostek');
+        let pot_simpok = getValInput('pot_simpok');
+        let pot_adm = getValInput('pot_adm');
+        let pot_kematian = getValInput('pot_kematian');
+        let pot_ppap = getValInput('pot_ppap');
 
         let total_potongan = pot_angsuran + pot_urgent + jamsostek + pot_simpok + pot_adm + pot_kematian + pot_ppap;
         let bersih = plafon - total_potongan;
         
         document.getElementById('inputTerimaBersih').value = bersih;
+        document.getElementById('inputTerimaBersihTampil').value = 'Rp ' + bersih.toLocaleString('id-ID');
     }
 
     // 3.5. Cek Sisa Tagihan untuk Top-Up
@@ -210,7 +228,7 @@
     });
 
     document.getElementById('btnGunakanTopup').addEventListener('click', function() {
-        document.getElementsByName('potongan_angsuran')[0].value = this.getAttribute('data-nominal');
+        document.getElementById('pot_angsuran').value = Number(this.getAttribute('data-nominal')).toLocaleString('id-ID');
         kalkulasiTerimaBersih();
         alert('Nominal pelunasan berhasil dimasukkan ke form Potongan Angsuran!');
     });
@@ -238,6 +256,7 @@
                 alertBox.innerHTML = `<div class="alert alert-success alert-dismissible"><i class="fa-solid fa-circle-check me-2"></i>${result.message} <button class="btn-close" data-bs-dismiss="alert"></button></div>`;
                 this.reset();
                 document.getElementById('inputTerimaBersih').value = '0';
+                document.getElementById('inputTerimaBersihTampil').value = 'Rp 0';
                 window.scrollTo(0,0);
             } else {
                 alertBox.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Gagal: ${result.message}</div>`;

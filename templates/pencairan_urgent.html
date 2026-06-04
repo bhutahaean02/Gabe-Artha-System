@@ -58,11 +58,11 @@
                         <div class="row g-3">
                             <div class="col-md-12">
                                 <label class="form-label small fw-bold text-success">Jumlah Dana Urgent (Rp) *</label>
-                                <input type="number" name="jumlah_dana_urgent" class="form-control form-control-lg border-success fw-bold text-success" placeholder="Contoh: 3000000" required>
+                                <input type="text" name="jumlah_dana_urgent" class="form-control form-control-lg border-success fw-bold text-success format-rp" placeholder="Contoh: 3.000.000" required>
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label small fw-bold">Margin / Jasa (Rp) *</label>
-                                <input type="number" name="margin_dana_urgent" class="form-control" placeholder="Contoh: 150000" required>
+                                <input type="text" name="margin_dana_urgent" class="form-control format-rp" placeholder="Contoh: 150.000" required>
                             </div>
                         </div>
 
@@ -105,6 +105,29 @@
         const selectedOption = this.options[this.selectedIndex];
         document.getElementById('inputNamaAnggota').value = selectedOption.getAttribute('data-nama');
     });
+
+    // Otomatisasi perhitungan Margin 20%
+    const inputPokok = document.querySelector('input[name="jumlah_dana_urgent"]');
+    const inputMargin = document.querySelector('input[name="margin_dana_urgent"]');
+    
+    document.querySelectorAll('.format-rp').forEach(input => {
+        input.addEventListener('input', function() {
+            let val = this.value.replace(/[^0-9,]/g, '');
+            if (val) {
+                let parts = val.split(',');
+                let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+            }
+        });
+    });
+
+    if(inputPokok && inputMargin) {
+        inputPokok.addEventListener('input', function() {
+            let valStr = this.value.replace(/\./g, '').replace(/,/g, '.');
+            let nilaiPokok = parseFloat(valStr) || 0;
+            inputMargin.value = Number(nilaiPokok * 0.20).toLocaleString('id-ID'); // Margin otomatis diset 20%
+        });
+    }
 
     // 3. Proses Submit Data
     document.getElementById('formDanaUrgent').addEventListener('submit', function(e) {

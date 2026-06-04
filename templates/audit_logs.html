@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Audit Logs - Koperasi{% endblock %}
+{% block page_title %}Catatan Aktivitas Sistem (Audit Logs){% endblock %}
+
+{% block content %}
+<div class="card shadow border-0">
+    <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
+        <div>
+            <h5 class="mb-0 text-secondary fw-bold"><i class="fa-solid fa-shield-halved me-2"></i> Log Aktivitas Pengguna</h5>
+            <small class="text-muted"><i class="fa-solid fa-circle-info me-1"></i>Sistem akan otomatis menghapus log yang usianya lebih dari 3 bulan.</small>
+        </div>
+        <div class="d-flex mt-2 mt-md-0" style="width: 300px;">
+            <div class="input-group input-group-sm shadow-sm">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control" placeholder="Cari aksi, username, atau detail...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body bg-light p-0">
+        <div class="table-responsive" style="max-height: 75vh; overflow-y: auto;">
+            <table class="table table-hover table-striped align-middle mb-0 text-sm">
+                <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                        <th class="ps-3">Waktu Terjadi</th>
+                        <th>Pengguna / Kasir</th>
+                        <th class="text-center">Cabang</th>
+                        <th class="text-center">Aksi / Tindakan</th>
+                        <th width="45%">Rincian (Detail)</th>
+                    </tr>
+                </thead>
+                <tbody id="tableAudit">
+                    <tr><td colspan="5" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat log aktivitas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/audit_logs')
+        .then(res => res.json())
+        .then(res => {
+            const tbody = document.getElementById('tableAudit');
+            tbody.innerHTML = '';
+            
+            if (res.status === 'success' && res.data.length > 0) {
+                res.data.forEach(row => {
+                    // Format Detail dari JSON jika memungkinkan
+                    let detailHtml = '';
+                    try {
+                        const parsed = JSON.parse(row.detail);
+                        detailHtml = '<ul class="mb-0 ps-3 text-muted" style="font-size: 0.8rem;">';
+                        for (let k in parsed) {
+                            let val = parsed[k];
+                            const currencyFields = ['pokok', 'margin', 'denda', 'besar_pinjaman', 'nominal', 'terima_bersih', 'jumlah_dana_urgent'];
+                            if (currencyFields.includes(k) && !isNaN(val) && val !== '') {
+                                val = 'Rp ' + Number(val).toLocaleString('id-ID');
+                            }
+                            detailHtml += `<li><strong>${k.replace(/_/g, ' ').toUpperCase()}</strong>: ${val}</li>`;
+                        }
+                        detailHtml += '</ul>';
+                    } catch (e) {
+                        // Jika bukan JSON murni
+                        detailHtml = `<span class="text-muted" style="font-size: 0.8rem;">${row.detail}</span>`;
+                    }
+                    
+                    let actionBadge = 'bg-secondary';
+                    if(row.aksi.includes('BATAL_ANGSURAN')) actionBadge = 'bg-danger';
+                    else if(row.aksi.includes('BATAL_PENCAIRAN')) actionBadge = 'bg-warning text-dark';
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3 fw-bold text-secondary" style="white-space: nowrap; font-size: 0.85rem;">${row.created_at}</td>
+                            <td>
+                                <div class="fw-bold">${row.username || 'System'}</div>
+                                <small class="text-muted" style="font-size: 0.75rem;">${row.role || '-'}</small>
+                            </td>
+                            <td class="text-center"><span class="badge border border-secondary text-secondary">${row.cabang || 'GAS'}</span></td>
+                            <td class="text-center"><span class="badge ${actionBadge}">${row.aksi}</span></td>
+                            <td>${detailHtml}</td>
+                        </tr>
+                    `;
+                });
+            } else { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Belum ada catatan log aktivitas yang terekam.</td></tr>'; }
+        }).catch(err => { document.getElementById('tableAudit').innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Gagal memuat data log dari server.</td></tr>'; });
+    });
+
+    // Fitur Pencarian Cepat (Live Search)
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        document.querySelectorAll('#tableAudit tr').forEach(row => row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none');
+    });
+</script>
+{% endblock %}

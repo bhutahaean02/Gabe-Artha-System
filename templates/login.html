@@ -3,71 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Koperasi Gabe Artha</title>
+    <title>Koperasi Gabe Artha Nauli - Portal Resmi</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        body { background-color: #2c3e50; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .login-card { max-width: 400px; width: 100%; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .login-header { background-color: #ffffff; padding: 30px 20px 20px; text-align: center; }
-        .login-body { background-color: #f8f9fa; padding: 30px; }
-        .logo-icon { font-size: 3rem; color: #3498db; margin-bottom: 15px; }
+        :root {
+            --primary-blue: #0056A6; /* Warna biru menyerupai identitas BCA */
+            --accent-gold: #F2A900;  /* Warna emas elegan */
+            --bg-soft: #F5F7FA;
+            --text-dark: #333333;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-soft);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+        
+        /* --- NAVBAR --- */
+        .navbar-custom {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 12px 0;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            color: var(--primary-blue) !important;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+        }
+        .nav-link {
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-blue);
+        }
+        
+        /* --- HERO SECTION --- */
+        .hero-section {
+            background: linear-gradient(135deg, #ffffff 0%, #e8f0f8 100%);
+            padding: 120px 0 80px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .hero-title {
+            color: var(--primary-blue);
+            font-weight: 800;
+            font-size: 3rem;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: #555;
+            margin-bottom: 40px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+        .btn-gold {
+            background-color: var(--accent-gold);
+            color: #fff;
+            font-weight: 600;
+            padding: 12px 30px;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(242, 169, 0, 0.3);
+        }
+        .btn-gold:hover {
+            background-color: #d99700;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(242, 169, 0, 0.4);
+        }
+
+    .btn-outline-primary {
+        transition: all 0.3s ease;
+    }
+    .btn-outline-primary:hover {
+        background-color: var(--primary-blue) !important;
+        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 86, 166, 0.2) !important;
+    }
+        
+        /* --- LOGIN CARD --- */
+        .login-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 86, 166, 0.1);
+            border: 1px solid rgba(0,0,0,0.03);
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+        .login-header {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 30px 25px;
+            text-align: center;
+            border-bottom: 5px solid var(--accent-gold);
+        }
+        .login-body {
+            padding: 40px 35px;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 14px 15px;
+            border: 1px solid #e1e5eb;
+            background-color: #f9fbfd;
+            font-size: 0.95rem;
+        }
+        .form-control:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(0, 86, 166, 0.1);
+            background-color: #fff;
+        }
+        .input-group-text {
+            background-color: #f9fbfd;
+            border: 1px solid #e1e5eb;
+            color: #9aa3af;
+        }
+        .btn-login {
+            background-color: var(--primary-blue);
+            color: white;
+            font-weight: 600;
+            padding: 14px;
+            border-radius: 8px;
+            width: 100%;
+            transition: all 0.3s ease;
+            font-size: 1.05rem;
+        }
+        .btn-login:hover {
+            background-color: #004585;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 86, 166, 0.2);
+        }
+
+        /* --- FEATURES SECTION --- */
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            transition: all 0.4s ease;
+            border: 1px solid #f0f0f0;
+            height: 100%;
+        }
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 86, 166, 0.1);
+            border-color: var(--primary-blue);
+        }
+        .feature-icon {
+            font-size: 3.5rem;
+            color: var(--accent-gold);
+            margin-bottom: 25px;
+        }
+        .feature-title {
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+        }
+        
+        /* --- TESTIMONIAL SECTION --- */
+        .testimonial-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            border: 1px solid #f0f0f0;
+            height: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .testimonial-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 86, 166, 0.1);
+        }
+        .testimonial-card::before {
+            content: '\f10d';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 3rem;
+            color: rgba(242, 169, 0, 0.1);
+            z-index: 0;
+        }
+        .testimonial-card > * {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* --- FOOTER --- */
+        .footer {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 50px 0 20px;
+        }
+        
+        /* Ornamen Blob */
+        .shape-blob {
+            position: absolute;
+            top: -10%;
+            right: -5%;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(242, 169, 0, 0.15) 0%, rgba(0, 86, 166, 0.05) 70%, transparent 100%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+            animation: float 8s ease-in-out infinite alternate;
+        }
+        .shape-blob-2 {
+            position: absolute;
+            bottom: -15%;
+            left: -10%;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(0, 86, 166, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite alternate-reverse;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .floating-card { animation: float 4s ease-in-out infinite; }
+        .floating-card-2 { animation: float 5s ease-in-out infinite alternate; animation-delay: 1s; }
+        
+        .hero-title .highlight { position: relative; display: inline-block; z-index: 1; }
+        .hero-title .highlight::after {
+            content: '';
+            position: absolute;
+            left: -2%; bottom: 6px;
+            width: 104%; height: 12px;
+            background-color: rgba(242, 169, 0, 0.3);
+            z-index: -1;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="login-header">
-            <i class="fa-solid fa-building-columns logo-icon"></i>
-            <h4 class="fw-bold text-dark mb-0">KSP Gabe Artha Nauli</h4>
-            <p class="text-muted small mt-1">Sistem Informasi Manajemen Terpadu</p>
-        </div>
-        <div class="login-body">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} py-2 small fw-bold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            <form action="/login" method="POST">
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-secondary small">Username / Nama Anggota</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fa-solid fa-user text-muted"></i></span>
-                        <input type="text" name="username" class="form-control" placeholder="Staf: Username | Nasabah: Nama Lengkap" required autocomplete="off">
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label fw-bold text-secondary small">Password / Nomor Anggota</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="fa-solid fa-lock text-muted"></i></span>
-                        <input type="password" name="password" id="passwordInput" class="form-control border-end-0" placeholder="Staf: Password | Nasabah: Nomor Anggota" required>
-                        <span class="input-group-text bg-white" id="togglePassword" style="cursor: pointer;" title="Tampilkan Password">
-                            <i class="fa-solid fa-eye text-muted" id="toggleIcon"></i>
-                        </span>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm"><i class="fa-solid fa-right-to-bracket me-2"></i> Masuk Sistem</button>
-            </form>
-            <div class="text-center mt-4 pt-3 border-top">
-                <small class="text-muted">© 2026 KSP Gabe Artha Nauli</small>
+    
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fa-solid fa-building-columns text-warning fs-3 me-2"></i>
+                KSP GABE ARTHA NAULI
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="fa-solid fa-bars text-dark fs-4"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link px-3 active" href="#beranda">Beranda</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#layanan">Produk & Layanan</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#testimoni">Testimoni</a></li>
+                    <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
+                        <a href="#login-section" class="btn btn-gold px-4 py-2 shadow-sm">Portal Login</a>
+                    </li>
+                </ul>
             </div>
         </div>
-    </div>
+    </nav>
 
+    <!-- Hero Section & Login -->
+    <section id="beranda" class="hero-section overflow-hidden">
+        <div class="shape-blob"></div>
+        <div class="shape-blob-2"></div>
+        <div class="container" style="z-index: 1;">
+            <div class="row align-items-center">
+                
+                <!-- Text Promosi (Kiri) -->
+                <div class="col-lg-6 mb-5 mb-lg-0 pe-lg-5 position-relative">
+                    <span class="badge bg-white text-primary border border-primary px-3 py-2 rounded-pill mb-4 fw-bold shadow-sm" style="animation: fadeDown 1s ease;">
+                        <i class="fa-solid fa-star text-warning me-1"></i> Mitra Keuangan Terpercaya
+                    </span>
+                    <h1 class="hero-title" style="animation: fadeUp 1s ease 0.2s both;">
+                        Solusi Finansial <br><span class="highlight text-primary">Modern</span> & <span class="highlight text-warning">Terpercaya</span>
+                    </h1>
+                    <p class="hero-subtitle" style="animation: fadeUp 1s ease 0.4s both;">
+                        Kami hadir memberikan kemudahan layanan simpan pinjam digital. Nikmati persetujuan cepat, transparan, dan bunga yang kompetitif untuk kesejahteraan Anda bersama Koperasi Gabe Artha.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3 mb-5" style="animation: fadeUp 1s ease 0.6s both;">
+                        <a href="#login-section" class="btn btn-gold btn-lg px-4 shadow-sm"><i class="fa-solid fa-right-to-bracket me-2"></i>Masuk Akun</a>
+                        <a href="#layanan" class="btn btn-outline-primary btn-lg bg-white fw-bold px-4 shadow-sm">Pelajari Layanan</a>
+                    </div>
+
+                    <!-- Floating Stats -->
+                    <div class="row g-3" style="animation: fadeUp 1s ease 0.8s both;">
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center bg-white p-3 rounded-4 shadow-sm floating-card border border-light">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fa-solid fa-bolt fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">Cepat</h5>
+                                    <small class="text-muted">Cair hari ini</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center bg-white p-3 rounded-4 shadow-sm floating-card-2 border border-light">
+                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                    <i class="fa-solid fa-shield-halved fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-dark">Aman</h5>
+                                    <small class="text-muted">100% Terjamin</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box Login (Kanan) -->
+                <div class="col-lg-5 offset-lg-1" id="login-section" style="animation: fadeUp 1s ease 0.5s both;">
+                    <div class="login-card">
+                        <div class="login-header">
+                            <h4 class="mb-1 fw-bold">Selamat Datang</h4>
+                            <small style="color: #c9e3ff;">Silakan masuk ke akun layanan digital Anda</small>
+                        </div>
+                        <div class="login-body">
+                            <!-- Menampilkan Flash Message / Notifikasi Gagal Login -->
+                            {% with messages = get_flashed_messages(with_categories=true) %}
+                                {% if messages %}
+                                    {% for category, message in messages %}
+                                        <div class="alert alert-{{ category }} alert-dismissible fade show small shadow-sm" role="alert">
+                                            <i class="fa-solid fa-circle-exclamation me-1"></i> {{ message }}
+                                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            {% endwith %}
+                            
+                            <form method="POST" action="/login">
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary small">Username / No. Anggota</label>
+                                    <div class="input-group shadow-sm rounded-3">
+                                        <span class="input-group-text border-end-0"><i class="fa-regular fa-user"></i></span>
+                                        <input type="text" name="username" class="form-control border-start-0 ps-0" placeholder="Masukkan ID Anda" required autocomplete="off">
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold text-secondary small">Password</label>
+                                    <div class="input-group shadow-sm rounded-3">
+                                        <span class="input-group-text border-end-0"><i class="fa-solid fa-lock"></i></span>
+                                        <input type="password" name="password" class="form-control border-start-0 ps-0" placeholder="Masukkan Password" required>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-4 small">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input border-secondary" id="rememberMe">
+                                        <label class="form-check-label text-muted" for="rememberMe" style="cursor: pointer;">Ingat Saya</label>
+                                    </div>
+                                    <a href="javascript:void(0)" class="text-decoration-none text-primary fw-bold" onclick="alert('Silakan hubungi Staff Koperasi atau Teller untuk mereset password Anda.')">Lupa Password?</a>
+                                </div>
+                                <button type="submit" id="btnLoginSubmit" class="btn btn-login btn-lg shadow">Masuk <i class="fa-solid fa-arrow-right ms-2"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <!-- Layanan Keunggulan Section -->
+    <section id="layanan" class="py-5 bg-white">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h6 class="text-warning fw-bold text-uppercase tracking-wider">Layanan Utama</h6>
+                <h2 class="fw-bold" style="color: var(--primary-blue);">Fasilitas Koperasi Unggulan</h2>
+                <p class="text-muted mt-2">Dapatkan layanan finansial yang dirancang khusus untuk memajukan kesejahteraan anggota.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fa-solid fa-hand-holding-dollar feature-icon"></i>
+                        <h5 class="feature-title">Pinjaman Multiguna</h5>
+                        <p class="text-muted small">Solusi pendanaan fleksibel untuk berbagai kebutuhan konsumtif dan produktif Anda dengan proses persetujuan cepat.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fa-solid fa-bolt feature-icon"></i>
+                        <h5 class="feature-title">Dana Urgent / Gaji</h5>
+                        <p class="text-muted small">Fasilitas dana talangan instan tanpa jaminan rumit untuk kebutuhan mendesak. Cair di hari yang sama.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fa-solid fa-piggy-bank feature-icon"></i>
+                        <h5 class="feature-title">Simpanan Berjangka</h5>
+                        <p class="text-muted small">Kelola keuangan masa depan Anda dengan Simpanan Pokok & Wajib yang aman serta imbal hasil yang menguntungkan.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimoni Anggota Section -->
+    <section id="testimoni" class="py-5" style="background-color: var(--bg-soft);">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <h6 class="text-warning fw-bold text-uppercase tracking-wider">Apa Kata Mereka</h6>
+                <h2 class="fw-bold" style="color: var(--primary-blue);">Kepercayaan Anggota Prioritas Kami</h2>
+                <p class="text-muted mt-2">Dengarkan pengalaman langsung dari anggota Koperasi Gabe Artha Nauli.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="d-flex mb-3">
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                        </div>
+                        <p class="text-muted fst-italic mb-4">"Proses pencairan dana urgent sangat cepat dan benar-benar membantu saat butuh dana talangan mendesak sebelum gajian. Pelayanan stafnya juga sangat ramah dan transparan."</p>
+                        <div class="d-flex align-items-center mt-auto">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 45px; height: 45px; font-size: 1.2rem;">A</div>
+                            <div><h6 class="fw-bold text-dark mb-0">Ahmad Sutanto</h6><small class="text-muted">Karyawan Swasta</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="d-flex mb-3">
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                        </div>
+                        <p class="text-muted fst-italic mb-4">"Saya ambil pinjaman multiguna untuk renovasi rumah. Bunganya cukup bersaing dan sistem pembayarannya sangat mudah dipantau karena saya bisa mengecek tagihan langsung dari HP."</p>
+                        <div class="d-flex align-items-center mt-auto">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 45px; height: 45px; font-size: 1.2rem;">S</div>
+                            <div><h6 class="fw-bold text-dark mb-0">Siti Nurhaliza</h6><small class="text-muted">Pegawai Negeri Sipil</small></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="testimonial-card">
+                        <div class="d-flex mb-3">
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star text-warning"></i>
+                            <i class="fa-solid fa-star-half-stroke text-warning"></i>
+                        </div>
+                        <p class="text-muted fst-italic mb-4">"Simpanan pokok dan wajib di koperasi ini dikelola dengan sangat transparan. Keamanan dana kita sangat terjamin dan bisa dicek langsung di sistem. Sangat *recommended*!"</p>
+                        <div class="d-flex align-items-center mt-auto">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-3" style="width: 45px; height: 45px; font-size: 1.2rem;">B</div>
+                            <div><h6 class="fw-bold text-dark mb-0">Budi Pratama</h6><small class="text-muted">Wiraswasta</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row text-start">
+                <div class="col-lg-7 mb-4 mb-lg-0 pe-lg-5">
+                    <h5 class="fw-bold text-warning mb-3"><i class="fa-solid fa-building-columns me-2"></i>KSP GABE ARTHA NAULI</h5>
+                    <p class="small text-white-50" style="line-height: 1.8;">Menjadi penyedia layanan keuangan mikro yang unggul, terpercaya, dan membawa dampak positif bagi kemandirian ekonomi anggota Koperasi melalui inovasi dan pelayanan sepenuh hati.</p>
+                </div>
+                <div class="col-lg-5 mb-4 mb-lg-0">
+                    <h6 class="fw-bold mb-3">Kantor Pusat Kami</h6>
+                    <p class="small text-white-50"><i class="fa-solid fa-location-dot me-2 text-warning"></i>Jl. Raya Pasar Kemis - Rajeg. Kp. Putat RT/RW 005/001 Ds. Sindang Panon Kec. Sindang Jaya, Tangerang, Banten.</p>
+                </div>
+            </div>
+            <div class="text-center my-5 py-4 bg-black bg-opacity-25 rounded-4 shadow">
+                <h5 class="fw-bold text-warning">Informasi Lebih Lanjut</h5>
+                <p class="text-white-50 mb-2">Hubungi kami jika membutuhkan bantuan teknis atau informasi lainnya.</p>
+                <p class="fs-6 text-white mb-1 mt-3"><i class="fa-brands fa-whatsapp me-2 text-warning"></i> IT and Data Manager : 08121072183</p>
+                <p class="fs-6 text-white mb-0"><i class="fa-brands fa-whatsapp me-2 text-warning"></i> Admin : 083150254419</p>
+            </div>
+            <hr class="border-light opacity-25">
+            <div class="text-center">
+                <p class="mb-0 small text-white-50">&copy; <span id="year"></span> KSP Gabe Artha Nauli. All Rights Reserved. Sistem Informasi Manajemen Berbasis Web.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('togglePassword').addEventListener('click', function () {
-            const passwordInput = document.getElementById('passwordInput');
-            const toggleIcon = document.getElementById('toggleIcon');
-            
-            // Cek apakah tipenya saat ini password
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text'; // Ubah jadi teks terlihat
-                toggleIcon.classList.replace('fa-eye', 'fa-eye-slash'); // Ganti jadi ikon mata disilang
-            } else {
-                passwordInput.type = 'password'; // Ubah kembali jadi titik-titik
-                toggleIcon.classList.replace('fa-eye-slash', 'fa-eye'); // Ganti jadi ikon mata biasa
-            }
+        // Animasi Loading saat tombol login ditekan
+        const loginForm = document.querySelector('form[action="/login"]');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function() {
+                const btn = document.getElementById('btnLoginSubmit');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Sedang Memproses...';
+            });
+        }
+
+        document.getElementById('year').textContent = new Date().getFullYear();
+        
+        // Smooth Scrolling Navigasi
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
         });
     </script>
 </body>

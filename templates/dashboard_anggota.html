@@ -4,29 +4,71 @@
 {% block page_title %}Informasi Keanggotaan & Tagihan{% endblock %}
 
 {% block content %}
+<style>
+    .member-card {
+        background: linear-gradient(135deg, #0056A6 0%, #003d7a 100%);
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 15px 35px rgba(0, 86, 166, 0.2) !important;
+    }
+    .member-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(242, 169, 0, 0.15) 0%, transparent 70%);
+        border-radius: 50%;
+        z-index: 0;
+    }
+    .member-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background-color: #F2A900;
+        z-index: 1;
+    }
+    .member-card-body { position: relative; z-index: 2; }
+    .bill-alert {
+        border-radius: 16px;
+        border-left: 5px solid !important;
+    }
+    .bill-alert-warning { background-color: #fff9e6; border-left-color: #F2A900 !important; border: 1px solid #ffeeba; }
+    .bill-alert-danger { background-color: #fff5f5; border-left-color: #dc3545 !important; border: 1px solid #f5c6cb; }
+    .text-gold { color: #F2A900 !important; }
+    .bg-blue { background-color: #0056A6 !important; }
+</style>
+
 <div class="row g-4">
     <!-- Kartu Anggota -->
-    <div class="col-md-5">
-        <div class="card border-0 shadow text-white" style="background: linear-gradient(135deg, #2980b9, #2c3e50); border-radius: 15px;">
-            <div class="card-body p-4 position-relative">
-                <div class="d-flex justify-content-between align-items-start mb-4">
-                    <div>
-                        <h5 class="fw-bold mb-0">KSP GABE ARTHA NAULI</h5>
-                        <small class="text-white-50">Kartu Tanda Anggota</small>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow member-card text-white h-100">
+            <div class="card-body p-4 member-card-body d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-gold"><i class="fa-solid fa-building-columns me-2"></i>KSP GABE ARTHA NAULI</h5>
+                            <small class="text-white-50 ms-4 ps-1">Kartu Anggota Digital</small>
+                        </div>
+                        <i class="fa-solid fa-wifi fs-4 text-white-50" style="transform: rotate(90deg);"></i>
                     </div>
-                    <i class="fa-solid fa-building-columns fs-2 text-white-50"></i>
+                    
+                    <h3 class="fw-bold mb-1 text-uppercase tracking-wider" id="kartuNama" style="letter-spacing: 2px;">Memuat...</h3>
+                    <p class="mb-4 text-white-50 font-monospace" id="kartuNoAnggota" style="font-size: 1.1rem; letter-spacing: 2px;">ID: ---- ---- ----</p>
                 </div>
                 
-                <h3 class="fw-bold mb-1 text-uppercase" id="kartuNama" style="letter-spacing: 1px;">Memuat...</h3>
-                <p class="mb-4 text-white-50" id="kartuNoAnggota">ID: -</p>
-                
-                <div class="row text-center mt-3 pt-3 border-top border-secondary">
-                    <div class="col-6 border-end border-secondary">
-                        <small class="text-white-50 d-block">Simpanan Pokok</small>
+                <div class="row text-center mt-auto pt-3 border-top border-light border-opacity-25">
+                    <div class="col-6 border-end border-light border-opacity-25">
+                        <small class="text-white-50 d-block text-uppercase mb-1" style="font-size: 0.75rem;">Simpanan Pokok</small>
                         <strong class="fs-5" id="kartuSimpPokok">Rp 0</strong>
                     </div>
                     <div class="col-6">
-                        <small class="text-white-50 d-block">Simpanan Wajib</small>
+                        <small class="text-white-50 d-block text-uppercase mb-1" style="font-size: 0.75rem;">Simpanan Wajib</small>
                         <strong class="fs-5" id="kartuSimpWajib">Rp 0</strong>
                     </div>
                 </div>
@@ -35,14 +77,14 @@
     </div>
 
     <!-- Info Tagihan -->
-    <div class="col-md-7">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white pt-3 pb-2 border-bottom-0">
-                <h6 class="fw-bold text-danger mb-0"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Tagihan Belum Dibayar</h6>
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; overflow: hidden;">
+            <div class="card-header bg-white pt-4 pb-3 border-bottom-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-file-invoice-dollar me-2 text-primary"></i> Informasi Tagihan Anda</h5>
             </div>
-            <div class="card-body bg-light p-3">
+            <div class="card-body bg-light p-4">
                 <div id="containerTagihanAnggota">
-                    <div class="text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Mencari tagihan Anda...</div>
+                    <div class="text-center text-muted py-5"><i class="fa-solid fa-spinner fa-spin fa-2x mb-3 text-primary"></i><br>Sinkronisasi data tagihan...</div>
                 </div>
             </div>
         </div>
@@ -75,17 +117,46 @@
                 if(t_utama.length > 0) {
                     let nextTag = t_utama[0];
                     let total = Number(nextTag.tagihan_pokok) + Number(nextTag.tagihan_margin);
-                    htmlTagihan += `<div class="alert alert-warning border border-warning shadow-sm"><div class="d-flex justify-content-between align-items-center mb-2"><span class="badge bg-danger">Pinjaman ${nextTag.jenis_pinjaman}</span><span class="fw-bold">Jatuh Tempo: ${nextTag.jatuh_tempo}</span></div><h4 class="fw-bold text-dark mb-1">Tagihan Ke-${nextTag.angsuran_ke}</h4><div class="d-flex justify-content-between fs-5"><span>Total Tagihan:</span><span class="fw-bold text-danger">${formatRp(total)}</span></div><hr class="my-2"><small class="text-muted">Harap bayar sebelum jatuh tempo untuk menghindari denda.</small></div>`;
+                    htmlTagihan += `<div class="bill-alert bill-alert-warning p-3 shadow-sm mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-blue text-white px-3 py-2 rounded-pill"><i class="fa-solid fa-credit-card me-1"></i> Pinjaman ${nextTag.jenis_pinjaman}</span>
+                            <span class="fw-bold text-danger small"><i class="fa-regular fa-calendar me-1"></i> Jatuh Tempo: ${nextTag.jatuh_tempo}</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mt-3 mb-1">Tagihan Ke-${nextTag.angsuran_ke}</h5>
+                        <div class="d-flex justify-content-between align-items-end mt-2">
+                            <span class="text-muted small">Total yang harus dibayar:</span>
+                            <span class="fw-bold text-danger fs-4">${formatRp(total)}</span>
+                        </div>
+                    </div>`;
                 }
 
                 let t_urgent = d.tagihan_urgent.filter(t => t.status === 'BELUM BAYAR');
                 if(t_urgent.length > 0) {
                     let urg = t_urgent[0];
                     let totalUrg = Number(urg.tagihan_pokok) + Number(urg.tagihan_margin);
-                    htmlTagihan += `<div class="alert alert-danger border border-danger shadow-sm mt-3"><div class="d-flex justify-content-between align-items-center mb-2"><span class="badge bg-dark">Dana Urgent ${urg.jenis_dana_urgent}</span><span class="fw-bold">Jatuh Tempo: ${urg.tanggal_jatuh_tempo}</span></div><div class="d-flex justify-content-between fs-5"><span>Total Tagihan:</span><span class="fw-bold text-danger">${formatRp(totalUrg)}</span></div></div>`;
+                    htmlTagihan += `<div class="bill-alert bill-alert-danger p-3 shadow-sm mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-dark text-white px-3 py-2 rounded-pill"><i class="fa-solid fa-bolt text-warning me-1"></i> Dana Urgent ${urg.jenis_dana_urgent}</span>
+                            <span class="fw-bold text-danger small"><i class="fa-regular fa-calendar me-1"></i> Jatuh Tempo: ${urg.tanggal_jatuh_tempo}</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mt-3 mb-1">Pelunasan Penuh</h5>
+                        <div class="d-flex justify-content-between align-items-end mt-2">
+                            <span class="text-muted small">Total yang harus dibayar:</span>
+                            <span class="fw-bold text-danger fs-4">${formatRp(totalUrg)}</span>
+                        </div>
+                    </div>`;
                 }
 
-                if(htmlTagihan === '') htmlTagihan = `<div class="alert alert-success text-center py-4 border-0 shadow-sm"><i class="fa-solid fa-check-circle fa-3x text-success mb-3"></i><br><h5>Tidak Ada Tagihan</h5><p class="text-muted mb-0">Hebat! Anda tidak memiliki tagihan pinjaman.</p></div>`;
+                if(htmlTagihan === '') {
+                    htmlTagihan = `
+                    <div class="text-center py-5">
+                        <div class="d-inline-flex justify-content-center align-items-center bg-white rounded-circle shadow-sm mb-4" style="width: 80px; height: 80px;">
+                            <i class="fa-solid fa-check text-success fa-3x"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Tidak Ada Tagihan</h5>
+                        <p class="text-muted mb-0">Hebat! Saat ini Anda tidak memiliki tagihan aktif yang perlu dibayar.</p>
+                    </div>`;
+                }
                 document.getElementById('containerTagihanAnggota').innerHTML = htmlTagihan;
             }
         });

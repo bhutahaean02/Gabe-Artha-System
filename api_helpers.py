@@ -15,6 +15,9 @@ def parse_float(value, field_name):
     if not value:
         return 0.0
     try:
+        if isinstance(value, str):
+            value = value.replace('.', '')
+            value = value.replace(',', '.')
         return float(value)
     except (ValueError, TypeError):
         raise ValueError(f"Input pada '{field_name}' harus berupa angka yang valid.")
@@ -90,7 +93,7 @@ def terbilang(n):
     return bilang(n)
 
 # === FUNGSI BANTUAN UNTUK KALKULASI DENDA KETERLAMBATAN ===
-def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda_db, angsuran_denda, denda_aktif=True):
+def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda_db, angsuran_denda, denda_aktif=True, jenis_pinjaman='Multiguna'):
     if not jatuh_tempo or not denda_aktif:
         return 0, 0.0
         
@@ -114,6 +117,9 @@ def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_ma
     if sisa_p <= 0.01 and sisa_m <= 0.01:
         d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0)
     else:
-        d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.005 * od_hari)
+        if jenis_pinjaman in ['Tempo', 'Gaji', 'THR']:
+            d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.007 * od_hari)
+        else:
+            d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.005 * od_hari)
         
     return od_hari, max(0, d_kalk)

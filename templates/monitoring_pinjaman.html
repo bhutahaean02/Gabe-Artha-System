@@ -50,44 +50,48 @@
 <div class="row mb-4 g-3">
     <!-- Tagihan Aktif Hari Ini -->
     <div class="col-md-3">
-        <div class="card bg-primary text-white h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-white-50 fw-bold"><i class="fa-solid fa-calendar-day me-2"></i>Jatuh Tempo Hari Ini</h6>
+        <div class="card border-0 shadow-sm metric-card card-blue h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-calendar-day metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Jatuh Tempo Hari Ini</h6>
                 <h4 class="fw-bold mb-0" id="highlight_hari_ini_tagihan">Rp 0</h4>
-                <div class="mt-2 small"><span id="highlight_hari_ini_anggota" class="fw-bold">0</span> Anggota</div>
+                <div class="mt-2 small text-white-50"><span id="highlight_hari_ini_anggota" class="fw-bold text-white">0</span> Anggota</div>
             </div>
         </div>
     </div>
 
     <!-- Tunggakan Bulan Ini -->
     <div class="col-md-3">
-        <div class="card bg-warning text-dark h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-dark-50 fw-bold"><i class="fa-solid fa-circle-exclamation me-2"></i>Tunggakan Bulan Ini</h6>
+        <div class="card border-0 shadow-sm metric-card card-gold h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-circle-exclamation metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Tunggakan Bulan Ini</h6>
                 <h4 class="fw-bold mb-0" id="highlight_bulan_ini_tagihan">Rp 0</h4>
-                <div class="mt-2 small"><span id="highlight_bulan_ini_anggota" class="fw-bold">0</span> Anggota Menunggak</div>
+                <div class="mt-2 small text-white-50"><span id="highlight_bulan_ini_anggota" class="fw-bold text-white">0</span> Anggota Menunggak</div>
             </div>
         </div>
     </div>
 
     <!-- Tunggakan 1-6 Bulan -->
     <div class="col-md-3">
-        <div class="card bg-danger text-white h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-white-50 fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>Tunggakan 1-6 Bulan</h6>
+        <div class="card border-0 shadow-sm metric-card card-danger-grad h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-triangle-exclamation metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Tunggakan 1-6 Bulan</h6>
                 <h4 class="fw-bold mb-0" id="highlight_1_6_bulan_tagihan">Rp 0</h4>
-                <div class="mt-2 small"><span id="highlight_1_6_bulan_anggota" class="fw-bold">0</span> Anggota Menunggak</div>
+                <div class="mt-2 small text-white-50"><span id="highlight_1_6_bulan_anggota" class="fw-bold text-white">0</span> Anggota Menunggak</div>
             </div>
         </div>
     </div>
 
     <!-- Tunggakan > 6 Bulan -->
     <div class="col-md-3">
-        <div class="card bg-dark text-white h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h6 class="text-white-50 fw-bold"><i class="fa-solid fa-skull-crossbones me-2"></i>Tunggakan > 6 Bulan</h6>
+        <div class="card border-0 shadow-sm metric-card card-dark h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-skull-crossbones metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Tunggakan > 6 Bulan</h6>
                 <h4 class="fw-bold mb-0" id="highlight_lebih_6_bulan_tagihan">Rp 0</h4>
-                <div class="mt-2 small"><span id="highlight_lebih_6_bulan_anggota" class="fw-bold">0</span> Anggota Menunggak</div>
+                <div class="mt-2 small text-white-50"><span id="highlight_lebih_6_bulan_anggota" class="fw-bold text-white">0</span> Anggota Menunggak</div>
             </div>
         </div>
     </div>
@@ -96,10 +100,11 @@
 <!-- Akumulasi Denda -->
 <div class="row mb-4">
     <div class="col-12">
-        <div class="card border-danger shadow-sm">
-            <div class="card-body text-center bg-danger bg-opacity-10">
-                <h6 class="text-danger fw-bold"><i class="fa-solid fa-sack-dollar me-2"></i>Akumulasi Denda Keseluruhan</h6>
-                <h3 class="text-danger fw-bold mb-0" id="highlight_akumulasi_denda">Rp 0</h3>
+        <div class="card border-0 shadow-sm metric-card card-danger-grad">
+            <div class="card-body text-center p-4">
+                <i class="fa-solid fa-sack-dollar metric-icon text-white" style="right: auto; left: 10px; opacity: 0.1;"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-2" style="letter-spacing: 1px; font-size: 0.8rem;">Akumulasi Denda Keseluruhan</h6>
+                <h2 class="text-white fw-bold mb-0" id="highlight_akumulasi_denda">Rp 0</h2>
             </div>
         </div>
     </div>
@@ -197,6 +202,7 @@
                     let angsuranMargin = isLunas ? Number(row.angsuran_margin) : tagihanMargin;
                     let angsuranDenda = isLunas ? Number(row.angsuran_denda) : tunggakanDenda;
                     let totalAngsuran = angsuranPokok + angsuranMargin + angsuranDenda;
+                    let edcVal = parseFloat(row.edc) || 0;
                     
                     let tunggakanAngsuran = odHari > 0 ? (tagihanPokok + tagihanMargin) : 0;
                     let totalTunggakan = tunggakanAngsuran + tunggakanDenda;
@@ -219,7 +225,7 @@
                         <td>${row.no_telp || '-'}</td><td>${row.nik_ktp || '-'}</td><td class="text-center">-</td><td class="text-center">-</td>
                         <td>${jmoSelect}</td><td class="text-center">-</td><td>${row.jenis_pinjaman || '-'}</td><td class="text-center">${row.tgl_pencairan || '-'}</td>
                         <td class="text-end">${formatRp(row.besar_pinjaman)}</td><td class="text-center">${row.tenor || '-'}</td><td class="text-center">${row.bunga_persen ? row.bunga_persen+'%' : '-'}</td><td class="text-center fw-bold">${row.angsuran_ke || '-'}</td>
-                        <td class="text-end">${formatRp(row.simpanan_wajib)}</td><td class="text-center fw-bold text-primary">${row.edc || '-'}</td><td class="text-center"><span class="badge ${row.status_pembayaran === 'LUNAS' ? 'bg-success' : (row.status_pembayaran ? 'bg-warning text-dark' : 'bg-secondary')}">${row.status_pembayaran || 'TIDAK ADA PINJAMAN'}</span></td>
+                        <td class="text-end">${formatRp(row.simpanan_wajib)}</td><td class="text-end fw-bold text-primary">${edcVal > 0 ? formatRp(edcVal) : '-'}</td><td class="text-center"><span class="badge ${row.status_pembayaran === 'LUNAS' ? 'bg-success' : (row.status_pembayaran ? 'bg-warning text-dark' : 'bg-secondary')}">${row.status_pembayaran || 'TIDAK ADA PINJAMAN'}</span></td>
                         <td class="text-end">${formatRp(angsuranPokok)}</td><td class="text-end">${formatRp(angsuranMargin)}</td><td class="text-end">${formatRp(angsuranDenda)}</td>
                         <td class="text-end fw-bold text-primary">${formatRp(totalAngsuran)}</td><td class="text-end fw-bold text-info">${formatRp(totalAngsuran)}</td>
                         <td class="text-end ${overdueClass}">${formatRp(tunggakanAngsuran)}</td><td class="text-center ${overdueClass}">${odHari}</td><td class="text-end ${overdueClass}">${formatRp(tunggakanDenda)}</td>

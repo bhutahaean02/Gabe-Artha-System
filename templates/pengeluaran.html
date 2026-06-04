@@ -32,7 +32,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Nominal (Rp) *</label>
-                        <input type="number" name="nominal" class="form-control fw-bold text-danger fs-5" placeholder="0" required>
+                        <input type="text" name="nominal" class="form-control fw-bold text-danger fs-5 format-rp" placeholder="0" required>
                     </div>
                     <div class="mb-4">
                         <label class="form-label small fw-bold">Keterangan / Catatan *</label>
@@ -115,6 +115,17 @@
             } else { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Belum ada transaksi bulan ini.</td></tr>'; }
         });
     }
+
+    document.querySelectorAll('.format-rp').forEach(input => {
+        input.addEventListener('input', function() {
+            let val = this.value.replace(/[^0-9,]/g, '');
+            if (val) {
+                let parts = val.split(',');
+                let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+            }
+        });
+    });
 
     document.getElementById('formPengeluaran').addEventListener('submit', function(e) {
         e.preventDefault();

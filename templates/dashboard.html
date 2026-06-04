@@ -5,56 +5,55 @@
 
 {% block content %}
 <!-- HIGHLIGHT DASHBOARD METRICS -->
-<div class="row g-3 mb-4">
+<div class="row g-4 mb-4">
     <!-- Kas Utama -->
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-success text-white h-100">
-            <div class="card-body">
-                <h6><i class="fa-solid fa-wallet me-2"></i>Total Kas Saat Ini</h6>
-                <h4 id="dash_total_kas"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+        <div class="card border-0 shadow-sm metric-card card-soft-green h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-wallet metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Total Kas Saat Ini</h6>
+                <h3 class="fw-bold mb-0" id="dash_total_kas"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
             </div>
         </div>
     </div>
     <!-- Outstanding Piutang -->
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-primary text-white h-100">
-            <div class="card-body">
-                <h6><i class="fa-solid fa-hand-holding-dollar me-2"></i>Pinjaman Beredar</h6>
-                <h4 id="dash_total_piutang"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+        <div class="card border-0 shadow-sm metric-card card-blue h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-hand-holding-dollar metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Pinjaman Beredar</h6>
+                <h3 class="fw-bold mb-0" id="dash_total_piutang"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
             </div>
         </div>
     </div>
     <!-- Total Simpanan -->
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-warning text-dark h-100">
-            <div class="card-body">
-                <h6><i class="fa-solid fa-piggy-bank me-2"></i>Kewajiban Simpanan</h6>
-                <h4 id="dash_total_simpanan"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+        <div class="card border-0 shadow-sm metric-card card-gold h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-piggy-bank metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Kewajiban Simpanan</h6>
+                <h3 class="fw-bold mb-0" id="dash_total_simpanan"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
             </div>
         </div>
     </div>
     <!-- Jumlah Anggota -->
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm bg-dark text-white h-100">
-            <div class="card-body">
-                <h6><i class="fa-solid fa-users me-2"></i>Anggota Terdaftar</h6>
-                <h4 id="dash_total_anggota"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h4>
+        <div class="card border-0 shadow-sm metric-card card-dark h-100">
+            <div class="card-body p-4">
+                <i class="fa-solid fa-users metric-icon text-white"></i>
+                <h6 class="text-white-50 fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">Anggota Terdaftar</h6>
+                <h3 class="fw-bold mb-0" id="dash_total_anggota"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
             </div>
         </div>
     </div>
-</div>
-
-<div class="d-flex justify-content-end mb-3">
-    <a href="/pencairan" class="btn btn-sm btn-primary me-2"><i class="fa-solid fa-plus me-1"></i> Pencairan Baru</a>
-    <a href="/pembayaran" class="btn btn-sm btn-success"><i class="fa-solid fa-check me-1"></i> Terima Angsuran</a>
 </div>
 
 <!-- SECTION EVALUASI KEUANGAN -->
 <div class="row g-4 mb-4">
     <!-- Evaluasi Harian -->
     <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm eval-card h-100">
+            <div class="card-header eval-card-header py-3">
                 <h6 class="m-0 fw-bold text-primary"><i class="fa-solid fa-calendar-day me-2"></i>Evaluasi Harian (Day to Day)</h6>
             </div>
             <div class="card-body">
@@ -81,8 +80,8 @@
     
     <!-- Evaluasi Mingguan -->
     <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm eval-card h-100">
+            <div class="card-header eval-card-header py-3">
                 <h6 class="m-0 fw-bold text-primary"><i class="fa-solid fa-calendar-week me-2"></i>Evaluasi Mingguan</h6>
             </div>
             <div class="card-body">
@@ -109,8 +108,8 @@
 </div>
 
 <!-- Chart Bulanan -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3">
+<div class="card shadow-sm eval-card mb-4">
+    <div class="card-header eval-card-header py-3">
         <h6 class="m-0 fw-bold text-primary"><i class="fa-solid fa-chart-column me-2"></i>Trend Keuangan (Januari s.d Berjalan)</h6>
     </div>
     <div class="card-body">

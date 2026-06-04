@@ -66,6 +66,10 @@ def proses_pencairan():
         tenor = parse_int(data.get('tenor'), 'Tenor')
         bunga_persen = parse_float(data.get('bunga_persen'), 'Bunga Persen')
         
+        # Jika pinjaman Tempo, paksa margin (bunga) menjadi 20%
+        if jenis_pencairan == 'Tempo':
+            bunga_persen = 20.0
+        
         potongan_angsuran = parse_float(data.get('potongan_angsuran'), 'Potongan Angsuran')
         potongan_dana_urgent = parse_float(data.get('potongan_dana_urgent'), 'Potongan Dana Urgent')
         biaya_jamsostek = parse_float(data.get('biaya_jamsostek'), 'Biaya Jamsostek')
@@ -215,7 +219,8 @@ def proses_pencairan_urgent():
         tgl_pencairan = data.get('tanggal_pencairan_dana_urgent')
         tgl_pembayaran = data.get('tanggal_pembayaran_dana_urgent')
         jumlah_dana_urgent = parse_float(data.get('jumlah_dana_urgent'), 'Jumlah Dana Urgent')
-        margin_dana_urgent = parse_float(data.get('margin_dana_urgent'), 'Margin Dana Urgent')
+        # Margin otomatis 20% dari pokok pinjaman dana urgent
+        margin_dana_urgent = jumlah_dana_urgent * 0.20
         
         cursor.execute("""
             INSERT INTO pencairan_dana_urgent (no_anggota, nama_anggota, jenis_dana_urgent, tanggal_pencairan_dana_urgent, tanggal_pembayaran_dana_urgent, jumlah_dana_urgent, margin_dana_urgent)
@@ -324,7 +329,11 @@ def get_info_tagihan(no_anggota):
                 if sisa_p <= 0.01 and sisa_m <= 0.01:
                     d_kalk = float(tagihan_utama.get('tagihan_denda') or 0) - float(tagihan_utama.get('angsuran_denda') or 0)
                 else:
-                    add_denda = (sisa_p + sisa_m) * 0.005 * od_hari_sisa
+                    jenis = tagihan_utama.get('jenis_pinjaman')
+                    if jenis == 'Tempo':
+                        add_denda = (sisa_p + sisa_m) * 0.007 * od_hari_sisa
+                    else:
+                        add_denda = (sisa_p + sisa_m) * 0.005 * od_hari_sisa
                     d_kalk = float(tagihan_utama.get('tagihan_denda') or 0) - float(tagihan_utama.get('angsuran_denda') or 0) + add_denda
                 tagihan_utama['kalkulasi_denda'] = max(0, d_kalk) if denda_aktif else 0
             else:
@@ -348,7 +357,8 @@ def get_info_tagihan(no_anggota):
                 if sisa_p_urg <= 0.01 and sisa_m_urg <= 0.01:
                     d_kalk_urg = float(tagihan_urgent.get('tagihan_denda') or 0) - float(tagihan_urgent.get('angsuran_denda') or 0)
                 else:
-                    add_denda_urg = (sisa_p_urg + sisa_m_urg) * 0.005 * od_hari_urg_sisa
+                    # Denda Dana Urgent 0.7% (Pokok + Margin)
+                    add_denda_urg = (sisa_p_urg + sisa_m_urg) * 0.007 * od_hari_urg_sisa
                     d_kalk_urg = float(tagihan_urgent.get('tagihan_denda') or 0) - float(tagihan_urgent.get('angsuran_denda') or 0) + add_denda_urg
                 tagihan_urgent['kalkulasi_denda'] = max(0, d_kalk_urg) if denda_aktif else 0
             else:
@@ -410,7 +420,7 @@ def bayar_angsuran():
             denda = parse_float(data.get('nominal_denda_utama'), 'Nominal Denda Utama')
             angsuran_ke_utama = data.get('angsuran_ke_utama')
             
-            cursor.execute("SELECT angsuran_pokok, angsuran_margin, angsuran_denda, tagihan_pokok, tagihan_margin, tagihan_denda, jatuh_tempo, tgl_bayar, edc, sisa_gaji FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
+            cursor.execute("SELECT angsuran_pokok, angsuran_margin, angsuran_denda, tagihan_pokok, tagihan_margin, tagihan_denda, jatuh_tempo, tgl_bayar, edc, sisa_gaji, jenis_pinjaman FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
             row_u = cursor.fetchone()
             
             if row_u:
@@ -424,8 +434,9 @@ def bayar_angsuran():
                 last_pay = row_u['tgl_bayar'] if isinstance(row_u, dict) else row_u[7]
                 exist_edc = row_u['edc'] if isinstance(row_u, dict) else row_u[8]
                 exist_sg = row_u['sisa_gaji'] if isinstance(row_u, dict) else row_u[9]
+                j_pinjaman = row_u['jenis_pinjaman'] if isinstance(row_u, dict) else row_u[10]
             else:
-                prev_p, prev_m, prev_d, tag_p, tag_m, tag_d_db, jt, last_pay, exist_edc, exist_sg = 0, 0, 0, 0, 0, 0, None, None, '-', 0
+                prev_p, prev_m, prev_d, tag_p, tag_m, tag_d_db, jt, last_pay, exist_edc, exist_sg, j_pinjaman = 0, 0, 0, 0, 0, 0, None, None, '-', 0, 'Multiguna'
                 
             new_p = prev_p + pokok
             new_m = prev_m + margin
@@ -459,7 +470,10 @@ def bayar_angsuran():
             sisa_m_before = max(0, tag_m - prev_m)
             if sisa_p_before > 0.01 or sisa_m_before > 0.01:
                 if denda_aktif:
-                    curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.005 * od_h_sisa)
+                    if j_pinjaman == 'Tempo':
+                        curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.007 * od_h_sisa)
+                    else:
+                        curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.005 * od_h_sisa)
             
             sisa_p_baru = tag_p - new_p
             sisa_m_baru = tag_m - new_m
@@ -556,7 +570,7 @@ def bayar_angsuran():
             sisa_m_before = max(0, tag_m - prev_m)
             if sisa_p_before > 0.01 or sisa_m_before > 0.01:
                 if denda_aktif:
-                    curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.005 * od_h_sisa)
+                    curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.007 * od_h_sisa)
             
             sisa_p_baru = tag_p - new_p
             sisa_m_baru = tag_m - new_m
@@ -765,7 +779,7 @@ def cek_sisa_tagihan(no_anggota):
 
         if denda_aktif:
             # Kalkulasi Denda Keterlambatan Multiguna
-            cursor.execute("SELECT jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            cursor.execute("SELECT jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda, jenis_pinjaman FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
             for row in cursor.fetchall():
                 jt = row['jatuh_tempo']
                 if isinstance(jt, str): jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date()
@@ -775,7 +789,10 @@ def cek_sisa_tagihan(no_anggota):
                 if sisa_p <= 0.01 and sisa_m <= 0.01:
                     d_kalk = float(row['tagihan_denda'] or 0) - float(row['angsuran_denda'] or 0)
                 else:
-                    d_kalk = ((float(row['tagihan_pokok'] or 0) + float(row['tagihan_margin'] or 0)) * 0.005 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
+                    if row.get('jenis_pinjaman') == 'Tempo':
+                        d_kalk = ((sisa_p + sisa_m) * 0.007 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
+                    else:
+                        d_kalk = ((sisa_p + sisa_m) * 0.005 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
                 denda_multiguna += max(0, d_kalk)
 
             # Kalkulasi Denda Keterlambatan Urgent
@@ -789,7 +806,7 @@ def cek_sisa_tagihan(no_anggota):
                 if sisa_p_urg <= 0.01 and sisa_m_urg <= 0.01:
                     d_kalk_urg = float(row['tagihan_denda'] or 0) - float(row['angsuran_denda'] or 0)
                 else:
-                    d_kalk_urg = ((float(row['tagihan_pokok'] or 0) + float(row['tagihan_margin'] or 0)) * 0.005 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
+                    d_kalk_urg = ((sisa_p_urg + sisa_m_urg) * 0.007 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
                 denda_urgent += max(0, d_kalk_urg)
 
         total_multiguna = float(multiguna['sisa_pokok'] or 0) + float(multiguna['sisa_margin'] or 0) + denda_multiguna
@@ -961,6 +978,7 @@ def batal_angsuran():
     elif str(jenis).lower() in ['gaji', 'thr', 'dana urgent', 'urgent']: jenis = 'urgent'
     
     id_tagihan = data.get('id_tagihan') or data.get('id')
+    alasan_batal = data.get('alasan', 'Tidak ada alasan')
     
     if not id_tagihan or not jenis:
         return jsonify({'status': 'error', 'message': f'Data batal angsuran tidak lengkap. Payload: {json.dumps(data)}'}), 400
@@ -1073,11 +1091,12 @@ def batal_angsuran():
         # --- AUDIT LOG ---
         try:
             cursor.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100), role VARCHAR(50), cabang VARCHAR(50), aksi VARCHAR(255), detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-            detail_log = json.dumps({'id_tagihan': id_tagihan, 'jenis': jenis, 'nama_anggota': nama_anggota, 'pokok': pokok, 'margin': margin})
+            detail_log = json.dumps({'id_tagihan': id_tagihan, 'jenis': jenis, 'nama_anggota': nama_anggota, 'pokok': pokok, 'margin': margin, 'alasan': alasan_batal})
             user_aktif = session.get('nama_lengkap', session.get('username', 'System'))
             role_aktif = session.get('role', 'System')
             cursor.execute("INSERT INTO audit_logs (username, role, cabang, aksi, detail) VALUES (%s, %s, %s, %s, %s)", 
                            (user_aktif, role_aktif, cabang_member, 'BATAL_ANGSURAN', detail_log))
+            cursor.execute("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
         except Exception:
             pass
 
@@ -1110,6 +1129,7 @@ def batal_pencairan():
     
     # Terima variasi key jika frontend menggunakan nama kolom dari list array pencairan
     no_anggota = data.get('no_anggota') or data.get('nomor_anggota')
+    alasan_batal = data.get('alasan', 'Tidak ada alasan')
     
     tgl_pencairan = data.get('tgl_pencairan') or data.get('tanggal_cair') or data.get('tanggal_pencairan_dana_urgent') or data.get('tanggal_pencairan')
     if tgl_pencairan:
@@ -1216,11 +1236,12 @@ def batal_pencairan():
         # --- AUDIT LOG ---
         try:
             cursor.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100), role VARCHAR(50), cabang VARCHAR(50), aksi VARCHAR(255), detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-            detail_log = json.dumps({'no_anggota': no_anggota, 'jenis': jenis, 'nama_anggota': nama_anggota, 'tanggal_cair': tgl_pencairan})
+            detail_log = json.dumps({'no_anggota': no_anggota, 'jenis': jenis, 'nama_anggota': nama_anggota, 'tanggal_cair': tgl_pencairan, 'alasan': alasan_batal})
             user_aktif = session.get('nama_lengkap', session.get('username', 'System'))
             role_aktif = session.get('role', 'System')
             cursor.execute("INSERT INTO audit_logs (username, role, cabang, aksi, detail) VALUES (%s, %s, %s, %s, %s)", 
                            (user_aktif, role_aktif, cabang_member, 'BATAL_PENCAIRAN', detail_log))
+            cursor.execute("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
         except Exception:
             pass
 

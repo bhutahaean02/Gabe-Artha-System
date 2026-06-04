@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, session, flash,
 from db import get_db_connection
 import re
 from werkzeug.security import check_password_hash
+import traceback
 
 # BARIS INILAH YANG DICARI OLEH app.py (pages_bp)
 pages_bp = Blueprint('pages', __name__)
@@ -15,6 +16,52 @@ def add_cache_control(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
     return response
+
+@pages_bp.app_errorhandler(Exception)
+def handle_all_exceptions(e):
+    error_msg = str(e)
+    trace = traceback.format_exc()
+    
+    # Jika error terjadi saat memanggil API di latar belakang (fetch), kembalikan JSON
+    if request.path.startswith('/api/'):
+        return jsonify({'status': 'error', 'message': error_msg, 'trace': trace}), 500
+        
+    # Jika error terjadi saat memuat Halaman HTML, tampilkan Layar Error Beranimasi
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terjadi Kesalahan Sistem</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <style>
+            body {{ background-color: #F5F7FA; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+            .error-card {{ background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(220, 53, 69, 0.15); max-width: 800px; width: 90%; padding: 40px; animation: slideUp 0.5s ease; border-top: 5px solid #dc3545; }}
+            @keyframes slideUp {{ from {{ opacity: 0; transform: translateY(30px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+            .icon-container {{ font-size: 5rem; color: #dc3545; margin-bottom: 20px; animation: pulse 2s infinite; }}
+            @keyframes pulse {{ 0% {{ transform: scale(1); }} 50% {{ transform: scale(1.05); }} 100% {{ transform: scale(1); }} }}
+            .traceback-box {{ background: #212529; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; text-align: left; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="error-card text-center">
+            <div class="icon-container"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 class="fw-bold text-dark">Oops! Terjadi Kesalahan Sistem</h2>
+            <p class="text-muted">Sistem mendeteksi adanya bug atau error pada server saat memuat halaman ini.</p>
+            <div class="alert alert-danger fw-bold">{error_msg}</div>
+            <button class="btn btn-outline-danger mt-3 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#tracebackCollapse"><i class="fa-solid fa-bug me-1"></i> Lihat Detail Bug (Untuk Tim IT)</button>
+            <a href="/" class="btn btn-primary mt-3 ms-2 shadow-sm"><i class="fa-solid fa-home me-1"></i> Kembali ke Beranda</a>
+            <div class="collapse mt-3" id="tracebackCollapse">
+                <div class="traceback-box">{trace}</div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+    </html>
+    """
+    return html_content, 500
 
 @pages_bp.before_app_request
 def check_auth():
@@ -68,10 +115,10 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
         try:
-            # Cek 1: Cari di tabel Staff (Admin & Manager)
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
             if user:
@@ -132,7 +179,13 @@ def login():
                     return redirect('/dashboard_anggota')
                 
             flash('Kredensial tidak valid! Periksa kembali Nama/Username dan Password/No Anggota Anda.', 'danger')
-        finally: cursor.close(); conn.close()
+            
+        except Exception as e:
+            flash(f"Terjadi Kesalahan Sistem (Bug/Error): {str(e)}", "danger")
+        finally: 
+            if 'cursor' in locals() and cursor: cursor.close()
+            if 'conn' in locals() and conn: conn.close()
+            
     return render_template('login.html')
 
 @pages_bp.route('/logout')
@@ -197,6 +250,14 @@ def neraca():
 def laporan_harian():
     return render_template('laporan_harian.html')
 
+@pages_bp.route('/laporan_tunggakan_multiguna')
+def laporan_tunggakan_multiguna():
+    return render_template('laporan_tunggakan_multiguna.html')
+
+@pages_bp.route('/laporan_tunggakan_urgent')
+def laporan_tunggakan_urgent():
+    return render_template('laporan_tunggakan_urgent.html')
+
 @pages_bp.route('/arus_kas')
 def arus_kas():
     return render_template('arus_kas.html')
@@ -213,6 +274,14 @@ def cetak_berkas():
 def approval():
     return render_template('approval.html')
 
+@pages_bp.route('/audit_logs')
+def audit_logs():
+    return render_template('audit_logs.html')
+
 @pages_bp.route('/dashboard_anggota')
 def dashboard_anggota():
     return render_template('dashboard_anggota.html')
+
+@pages_bp.route('/alldata')
+def alldata():
+    return render_template('alldata.html')

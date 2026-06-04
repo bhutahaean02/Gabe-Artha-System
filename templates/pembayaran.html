@@ -17,18 +17,28 @@
         <div id="alertBox"></div>
 
         <div class="row mb-4 bg-light p-3 rounded border align-items-center">
-            <div class="col-md-5">
-                <label class="form-label fw-bold">1. Pilih Anggota untuk Cek Tagihan *</label>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">1. Pilih Anggota *</label>
                 <select id="selectAnggota" class="form-select border-success shadow-sm">
                     <option value="" selected disabled>-- Memuat Data Anggota --</option>
+                </select>
+            </div>
+            <div class="col-md-3 mt-3 mt-md-0">
+                <label class="form-label fw-bold text-primary">Filter Tagihan</label>
+                <select id="filterTagihan" class="form-select border-primary shadow-sm">
+                    <option value="Semua">Semua Tagihan</option>
+                    <option value="Multiguna">Multiguna</option>
+                    <option value="Tempo">Tempo</option>
+                    <option value="Gaji">Dana Urgent Gaji</option>
+                    <option value="THR">Dana Urgent THR</option>
                 </select>
             </div>
             <div class="col-md-3 mt-3 mt-md-0">
                 <label class="form-label fw-bold text-primary">Tanggal Pembayaran</label>
                 <input type="date" id="inputTanggalBayar" class="form-control border-primary fw-bold text-primary" required>
             </div>
-            <div class="col-md-4 pt-3 pt-md-0 text-md-end text-muted small">
-                <i class="fa-solid fa-circle-info me-1"></i> Menampilkan otomatis tagihan bulan terdekat yang belum dibayar.
+            <div class="col-md-2 pt-3 pt-md-0 text-md-end text-muted small">
+                Tagihan terdekat.
             </div>
         </div>
 
@@ -101,15 +111,15 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Pokok (Rp)</label>
-                                    <input type="number" id="inputPokokUtama" name="nominal_pokok_utama" class="form-control fw-bold text-primary input-kalkulasi">
+                                    <input type="text" id="inputPokokUtama" name="nominal_pokok_utama" class="form-control fw-bold text-primary input-kalkulasi format-rp">
                                 </div>
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Margin (Rp)</label>
-                                    <input type="number" id="inputMarginUtama" name="nominal_margin_utama" class="form-control fw-bold text-primary input-kalkulasi">
+                                    <input type="text" id="inputMarginUtama" name="nominal_margin_utama" class="form-control fw-bold text-primary input-kalkulasi format-rp">
                                 </div>
                                 <div class="col-4">
                                     <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
-                                    <input type="number" id="inputDendaUtama" name="nominal_denda_utama" class="form-control fw-bold text-danger input-kalkulasi" value="0">
+                                    <input type="text" id="inputDendaUtama" name="nominal_denda_utama" class="form-control fw-bold text-danger input-kalkulasi format-rp" value="0">
                                 </div>
                             </div>
                             
@@ -118,7 +128,7 @@
                                 <label class="small fw-bold text-success mb-2"><i class="fa-solid fa-piggy-bank me-1"></i> Titipan Simpanan Wajib</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-success text-white border-success fw-bold">Rp</span>
-                                    <input type="number" id="inputSimpananWajib" name="nominal_simpanan_wajib" class="form-control border-success fw-bold text-success fs-5" value="0">
+                                    <input type="text" id="inputSimpananWajib" name="nominal_simpanan_wajib" class="form-control border-success fw-bold text-success fs-5 input-kalkulasi format-rp" value="0">
                                 </div>
                                 <small class="text-muted mt-1 d-block" style="font-size: 11px;">Isi nominal jika anggota menitipkan simpanan wajib bulan ini.</small>
                             </div>
@@ -172,15 +182,15 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Pokok (Rp)</label>
-                                    <input type="number" id="inputPokokUrgent" name="nominal_pokok_urgent" class="form-control fw-bold text-primary input-kalkulasi">
+                                    <input type="text" id="inputPokokUrgent" name="nominal_pokok_urgent" class="form-control fw-bold text-primary input-kalkulasi format-rp">
                                 </div>
                                 <div class="col-4">
                                     <label class="small fw-bold">Bayar Margin (Rp)</label>
-                                    <input type="number" id="inputMarginUrgent" name="nominal_margin_urgent" class="form-control fw-bold text-primary input-kalkulasi">
+                                    <input type="text" id="inputMarginUrgent" name="nominal_margin_urgent" class="form-control fw-bold text-primary input-kalkulasi format-rp">
                                 </div>
                                 <div class="col-4">
                                     <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
-                                    <input type="number" id="inputDendaUrgent" name="nominal_denda_urgent" class="form-control fw-bold text-danger input-kalkulasi" value="0">
+                                    <input type="text" id="inputDendaUrgent" name="nominal_denda_urgent" class="form-control fw-bold text-danger input-kalkulasi format-rp" value="0">
                                 </div>
                             </div>
                         </div>
@@ -203,7 +213,7 @@
                     <label class="form-label fw-bold small text-secondary">Biaya EDC / Admin Kasir (Rp)</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white fw-bold">Rp</span>
-                        <input type="number" id="inputEDC" class="form-control border-secondary bg-light shadow-sm" value="0" placeholder="0">
+                        <input type="text" id="inputEDC" class="form-control border-secondary bg-light shadow-sm input-kalkulasi format-rp" value="0" placeholder="0">
                     </div>
                 </div>
             </div>
@@ -238,6 +248,19 @@
     function formatRp(angka) {
         return `Rp ${Number(angka || 0).toLocaleString('id-ID')}`;
     }
+
+    function getValInput(id) {
+        let el = document.getElementById(id);
+        if(!el || !el.value) return 0;
+        return parseFloat(el.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
+    }
+    
+    function setValInput(id, val) {
+        document.getElementById(id).value = val > 0 ? Number(val).toLocaleString('id-ID') : '';
+    }
+
+    let currentDataUtama = null;
+    let currentDataUrgent = null;
 
     // Load Data Anggota
     document.addEventListener('DOMContentLoaded', function() {
@@ -292,6 +315,8 @@
             }
         });
     });
+    
+    document.getElementById('filterTagihan').addEventListener('change', applyFilter);
 
     // Event Pilih Anggota -> Tampilkan Tagihan
     document.getElementById('selectAnggota').addEventListener('change', function() {
@@ -310,11 +335,8 @@
         fetch(`/api/info_tagihan/${no_anggota}?tanggal=${document.getElementById('inputTanggalBayar').value}`)
         .then(r => r.json())
         .then(res => {
-            if(!res.data_utama && !res.data_urgent) {
-                pesanKosong.style.display = 'block'; return;
-            }
-
-            form.style.display = 'block';
+            currentDataUtama = res.data_utama;
+            currentDataUrgent = res.data_urgent;
 
             // Tampilkan total Dana Urgent di Rincian Tagihan Sistem (Area Utama)
             let totalUrgentSystem = 0;
@@ -324,7 +346,6 @@
             document.getElementById('dispTotalUrgentSystem').innerText = formatRp(totalUrgentSystem);
 
             if(res.data_utama) {
-                document.getElementById('areaUtama').style.display = 'block';
                 document.getElementById('id_utama').value = res.data_utama.id;
                 
                 // Simpan data no dan nama untuk dikirim ke tabel simpanan
@@ -345,8 +366,8 @@
                 let sisaPokokUtama = Math.max(0, (res.data_utama.tagihan_pokok || 0) - (res.data_utama.angsuran_pokok || 0));
                 let sisaMarginUtama = Math.max(0, (res.data_utama.tagihan_margin || 0) - (res.data_utama.angsuran_margin || 0));
                 
-                document.getElementById('inputPokokUtama').value = sisaPokokUtama;
-                document.getElementById('inputMarginUtama').value = sisaMarginUtama;
+                setValInput('inputPokokUtama', sisaPokokUtama);
+                setValInput('inputMarginUtama', sisaMarginUtama);
                 
                 document.getElementById('inputPokokUtama').readOnly = true;
                 document.getElementById('inputMarginUtama').readOnly = true;
@@ -355,7 +376,7 @@
 
                 // Menampilkan Denda
                 const dendaUtama = res.data_utama.kalkulasi_denda || 0;
-                document.getElementById('inputDendaUtama').value = dendaUtama;
+                setValInput('inputDendaUtama', dendaUtama);
                 document.getElementById('dispTagihanDendaUtama').innerText = formatRp(dendaUtama);
                 if(dendaUtama > 0) {
                     document.getElementById('txtInfoDendaUtama').innerText = `(Telat ${res.data_utama.od_hari} Hari)`;
@@ -373,7 +394,6 @@
             }
 
             if(res.data_urgent) {
-                document.getElementById('areaUrgent').style.display = 'block';
                 document.getElementById('id_urgent').value = res.data_urgent.id;
                 document.getElementById('txtJatuhTempoUrgent').innerText = res.data_urgent.tgl_pencairan || '-';
                 
@@ -383,8 +403,8 @@
                 let sisaPokokUrgent = Math.max(0, (res.data_urgent.tagihan_pokok || 0) - (res.data_urgent.angsuran_pokok || 0));
                 let sisaMarginUrgent = Math.max(0, (res.data_urgent.tagihan_margin || 0) - (res.data_urgent.angsuran_margin || 0));
                 
-                document.getElementById('inputPokokUrgent').value = sisaPokokUrgent;
-                document.getElementById('inputMarginUrgent').value = sisaMarginUrgent;
+                setValInput('inputPokokUrgent', sisaPokokUrgent);
+                setValInput('inputMarginUrgent', sisaMarginUrgent);
                 
                 document.getElementById('inputPokokUrgent').readOnly = true;
                 document.getElementById('inputMarginUrgent').readOnly = true;
@@ -394,7 +414,7 @@
                 // Jika areaUrgent memiliki input denda
                 const dendaUrgent = res.data_urgent.kalkulasi_denda || 0;
                 if(document.getElementById('inputDendaUrgent')) {
-                    document.getElementById('inputDendaUrgent').value = dendaUrgent;
+                    setValInput('inputDendaUrgent', dendaUrgent);
                     document.getElementById('dispTagihanDendaUrgent').innerText = formatRp(dendaUrgent);
                 }
             }
@@ -403,9 +423,43 @@
             document.getElementById('inputSimpananWajib').value = 0;
             document.getElementById('inputEDC').value = 0;
 
-            hitungTotal();
+            applyFilter();
         });
     });
+
+    function applyFilter() {
+        const filter = document.getElementById('filterTagihan').value;
+        const areaUtama = document.getElementById('areaUtama');
+        const areaUrgent = document.getElementById('areaUrgent');
+        const form = document.getElementById('formPembayaran');
+        const pesanKosong = document.getElementById('pesanKosong');
+
+        let showUtama = false;
+        let showUrgent = false;
+
+        if (currentDataUtama && (filter === 'Semua' || filter === currentDataUtama.jenis_pinjaman)) showUtama = true;
+        if (currentDataUrgent && (filter === 'Semua' || filter === currentDataUrgent.jenis_dana_urgent)) showUrgent = true;
+
+        areaUtama.style.display = showUtama ? 'block' : 'none';
+        areaUrgent.style.display = showUrgent ? 'block' : 'none';
+
+        if (!showUtama && !showUrgent) {
+            form.style.display = 'none';
+            pesanKosong.style.display = 'block';
+            if (currentDataUtama || currentDataUrgent) pesanKosong.innerHTML = `<i class="fa-solid fa-filter fa-2x mb-2 d-block mt-3"></i>Tidak ada tagihan yang cocok dengan filter terpilih.`;
+            else pesanKosong.innerHTML = `<i class="fa-solid fa-face-smile fa-2x mb-2 d-block mt-3"></i>Mantap! Anggota ini tidak memiliki tagihan aktif.`;
+        } else {
+            form.style.display = 'block';
+            pesanKosong.style.display = 'none';
+        }
+
+        if(document.getElementById('checkBayarUrgent')) {
+            document.getElementById('checkBayarUrgent').checked = showUrgent;
+            document.getElementById('checkBayarUrgent').dispatchEvent(new Event('change'));
+        }
+
+        hitungTotal();
+    }
 
     // Interaksi Centang Dana Urgent
     const checkBayarUrgent = document.getElementById('checkBayarUrgent');
@@ -421,39 +475,43 @@
         });
     }
 
-    // Interaksi Input Simpanan Wajib (Real-time mengubah total kasir)
-    document.getElementById('inputSimpananWajib').addEventListener('input', hitungTotal);
-    
-    // Interaksi Input EDC (Real-time mengubah total kasir)
-    document.getElementById('inputEDC').addEventListener('input', hitungTotal);
-    
     // Interaksi Input Kalkulasi Lainnya
     document.querySelectorAll('.input-kalkulasi').forEach(input => {
-        input.addEventListener('input', hitungTotal);
+        input.addEventListener('input', function() {
+            if(this.classList.contains('format-rp')) {
+                let val = this.value.replace(/[^0-9,]/g, '');
+                if (val) {
+                    let parts = val.split(',');
+                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+                }
+            }
+            hitungTotal();
+        });
     });
 
     function hitungTotal() {
         let finalTotal = 0;
         
         if (document.getElementById('areaUtama').style.display === 'block') {
-            finalTotal += (Number(document.getElementById('inputPokokUtama').value) || 0) + 
-                          (Number(document.getElementById('inputMarginUtama').value) || 0) + 
-                          (Number(document.getElementById('inputDendaUtama').value) || 0);
+            finalTotal += getValInput('inputPokokUtama') + 
+                          getValInput('inputMarginUtama') + 
+                          getValInput('inputDendaUtama');
         }
 
         // Ambil nominal simpanan wajib
-        let simpananWajib = Number(document.getElementById('inputSimpananWajib').value) || 0;
+        let simpananWajib = getValInput('inputSimpananWajib');
         finalTotal += simpananWajib; // Tambahkan ke total akhir
         
         // Ambil nominal EDC
-        let edc = Number(document.getElementById('inputEDC').value) || 0;
+        let edc = getValInput('inputEDC');
         finalTotal += edc;
 
         let chkUrgent = document.getElementById('checkBayarUrgent');
         if(chkUrgent && chkUrgent.checked && document.getElementById('areaUrgent').style.display === 'block') { 
-            finalTotal += (Number(document.getElementById('inputPokokUrgent').value) || 0) + 
-                          (Number(document.getElementById('inputMarginUrgent').value) || 0) + 
-                          (Number(document.getElementById('inputDendaUrgent').value) || 0);
+            finalTotal += getValInput('inputPokokUrgent') + 
+                          getValInput('inputMarginUrgent') + 
+                          getValInput('inputDendaUrgent');
         }
         document.getElementById('txtTotalBayar').innerText = `Rp ${finalTotal.toLocaleString('id-ID')}`;
     }
@@ -470,19 +528,19 @@
             nama_anggota: document.getElementById('id_utama').dataset.nama,
             tanggal_bayar: document.getElementById('inputTanggalBayar').value,
             bayar_utama: document.getElementById('areaUtama').style.display === 'block',
-            nominal_pokok_utama: document.getElementById('inputPokokUtama').value,
-            nominal_margin_utama: document.getElementById('inputMarginUtama').value,
-            nominal_denda_utama: document.getElementById('inputDendaUtama').value,
-            nominal_simpanan_wajib: document.getElementById('inputSimpananWajib').value,
+            nominal_pokok_utama: getValInput('inputPokokUtama'),
+            nominal_margin_utama: getValInput('inputMarginUtama'),
+            nominal_denda_utama: getValInput('inputDendaUtama'),
+            nominal_simpanan_wajib: getValInput('inputSimpananWajib'),
             angsuran_ke_utama: document.getElementById('areaUtama').style.display === 'block' ? document.getElementById('txtAngsuranKe').value : null,
-            edc_utama: document.getElementById('areaUtama').style.display === 'block' ? document.getElementById('inputEDC').value : 0,
+            edc_utama: document.getElementById('areaUtama').style.display === 'block' ? getValInput('inputEDC') : 0,
 
             id_urgent: document.getElementById('id_urgent') ? document.getElementById('id_urgent').value : null,
             bayar_urgent: document.getElementById('checkBayarUrgent') ? document.getElementById('checkBayarUrgent').checked : false,
-            nominal_pokok_urgent: document.getElementById('inputPokokUrgent') ? document.getElementById('inputPokokUrgent').value : 0,
-            nominal_margin_urgent: document.getElementById('inputMarginUrgent') ? document.getElementById('inputMarginUrgent').value : 0,
-            nominal_denda_urgent: document.getElementById('inputDendaUrgent') ? document.getElementById('inputDendaUrgent').value : 0,
-            edc_urgent: document.getElementById('areaUtama').style.display !== 'block' ? document.getElementById('inputEDC').value : 0
+            nominal_pokok_urgent: document.getElementById('inputPokokUrgent') ? getValInput('inputPokokUrgent') : 0,
+            nominal_margin_urgent: document.getElementById('inputMarginUrgent') ? getValInput('inputMarginUrgent') : 0,
+            nominal_denda_urgent: document.getElementById('inputDendaUrgent') ? getValInput('inputDendaUrgent') : 0,
+            edc_urgent: document.getElementById('areaUtama').style.display !== 'block' ? getValInput('inputEDC') : 0
         };
 
         fetch('/api/bayar_angsuran', {

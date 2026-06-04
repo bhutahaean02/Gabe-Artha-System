@@ -8,10 +8,10 @@
     <div class="card-header bg-white pt-3 pb-0 border-bottom-0 d-flex justify-content-between align-items-center">
         <ul class="nav nav-tabs border-bottom-0" id="approvalTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab"><i class="fa-solid fa-list-check me-1"></i> Menunggu Persetujuan</button>
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab"><i class="fa-solid fa-list-check me-1"></i> Menunggu Persetujuan</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-secondary" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab"><i class="fa-solid fa-clock-rotate-left me-1"></i> Riwayat Approval</button>
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab"><i class="fa-solid fa-clock-rotate-left me-1"></i> Riwayat Approval</button>
             </li>
         </ul>
         <button class="btn btn-sm btn-outline-secondary fw-bold mb-2 shadow-sm" onclick="loadQueue()"><i class="fa-solid fa-rotate-right me-1"></i> Refresh</button>
@@ -149,7 +149,12 @@
     function lihatDetail(id) {
         const payload = JSON.parse(queueData[id].data_payload);
         let html = '';
-        for(let key in payload) html += `<tr><th width="40%" class="text-uppercase text-secondary">${key.replace(/_/g, ' ')}</th><td class="fw-medium">${payload[key] || '-'}</td></tr>`;
+        const currFields = ['besar_pinjaman', 'potongan_angsuran', 'potongan_dana_urgent', 'biaya_jamsostek', 'potongan_simpanan_pokok', 'potongan_adm', 'potongan_dana_kematian', 'potongan_ppap', 'terima_bersih', 'jumlah_dana_urgent', 'margin_dana_urgent', 'nominal', 'nominal_pokok_utama', 'nominal_margin_utama', 'nominal_denda_utama', 'nominal_simpanan_wajib', 'edc_utama', 'nominal_pokok_urgent', 'nominal_margin_urgent', 'nominal_denda_urgent', 'edc_urgent'];
+        for(let key in payload) {
+            let val = payload[key];
+            if (currFields.includes(key) && !isNaN(val) && val !== '') val = 'Rp ' + Number(val).toLocaleString('id-ID');
+            html += `<tr><th width="40%" class="text-uppercase text-secondary">${key.replace(/_/g, ' ')}</th><td class="fw-medium">${val || '-'}</td></tr>`;
+        }
         document.getElementById('detailDataPayload').innerHTML = html;
         new bootstrap.Modal(document.getElementById('modalPayload')).show();
     }
