@@ -127,16 +127,6 @@
                         <th class="bg-danger text-white">TANGGAL PEMBAYARAN</th>
                         <th>STATUS PEKERJAAN</th>
                         <th>TGL BERAKHIR KONTRAK</th>
-                        <th>SURAT KET. KERJA</th>
-                        <th>EMAIL JAMSOSTEK</th>
-                        <th>PASSWORD JAMSOSTEK</th>
-                        <th>NOMOR KPJ JMO</th>
-                        <th>NOMOR HP</th>
-                        <th>NIK KTP</th>
-                        <th>SALDO JAMSOSTEK</th>
-                        <th>PEMBAYARAN IURAN TERAKHIR</th>
-                        <th>STATUS JAMSOSTEK</th>
-                        <th>BUKTI RISET</th>
                         <th>JENIS PINJAMAN</th>
                         <th>TANGGAL CAIR</th>
                         <th>BESAR PINJAMAN</th>
@@ -160,7 +150,7 @@
                     </tr>
                 </thead>
                 <tbody id="tbodyMonitoring">
-                    <tr><td colspan="37" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data monitoring...</td></tr>
+                    <tr><td colspan="27" class="text-center py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Memuat data monitoring...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -209,23 +199,14 @@
 
                     let overdueClass = odHari > 0 ? 'text-danger fw-bold bg-danger bg-opacity-10' : '';
                     
-                    // Pembuatan Dropdown Status JMO Otomatis
-                    const jmoOptions = ["AKTIF", "NON-AKTIF", "RISET", "SUDAH CAIR", "LINK", "LUNAS", "TIDAK ADA JMO"];
-                    let jmoSelect = `<select class="form-select form-select-sm border-secondary jmo-dropdown" data-no="${row.no_anggota}" style="font-size:11px; width:120px; font-weight:bold; cursor:pointer;">
-                        <option value="">- Pilih -</option>
-                        ${jmoOptions.map(opt => `<option value="${opt}" ${row.status_jmo === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                    </select>`;
-
                     tbody.innerHTML += `<tr>
                         <td class="sticky-col text-center">${i + 1}</td>
                         <td class="sticky-col fw-bold">${row.nama_anggota || '-'}</td>
                         <td>${row.pt_instansi || '-'}</td><td class="text-center fw-bold">${row.jatuh_tempo || '-'}</td><td class="text-center fw-bold text-danger">${row.tgl_bayar || '-'}</td>
-                        <td>${row.status_karyawan || '-'}</td><td class="text-center">${row.akhir_bekerja || '-'}</td><td class="text-center">-</td>
-                        <td>${row.email || '-'}</td><td>${row.password || '-'}</td><td>${row.no_jmo || '-'}</td>
-                        <td>${row.no_telp || '-'}</td><td>${row.nik_ktp || '-'}</td><td class="text-center">-</td><td class="text-center">-</td>
-                        <td>${jmoSelect}</td><td class="text-center">-</td><td>${row.jenis_pinjaman || '-'}</td><td class="text-center">${row.tgl_pencairan || '-'}</td>
+                        <td>${row.status_karyawan || '-'}</td><td class="text-center">${row.akhir_bekerja || '-'}</td>
+                        <td>${row.jenis_pinjaman || '-'}</td><td class="text-center">${row.tgl_pencairan || '-'}</td>
                         <td class="text-end">${formatRp(row.besar_pinjaman)}</td><td class="text-center">${row.tenor || '-'}</td><td class="text-center">${row.bunga_persen ? row.bunga_persen+'%' : '-'}</td><td class="text-center fw-bold">${row.angsuran_ke || '-'}</td>
-                        <td class="text-end">${formatRp(row.simpanan_wajib)}</td><td class="text-end fw-bold text-primary">${edcVal > 0 ? formatRp(edcVal) : '-'}</td><td class="text-center"><span class="badge ${row.status_pembayaran === 'LUNAS' ? 'bg-success' : (row.status_pembayaran ? 'bg-warning text-dark' : 'bg-secondary')}">${row.status_pembayaran || 'TIDAK ADA PINJAMAN'}</span></td>
+                        <td class="text-end">${formatRp(row.simpanan_wajib_bayar)}</td><td class="text-end fw-bold text-primary">${edcVal > 0 ? formatRp(edcVal) : '-'}</td><td class="text-center"><span class="badge ${row.status_pembayaran === 'LUNAS' ? 'bg-success' : (row.status_pembayaran ? 'bg-warning text-dark' : 'bg-secondary')}">${row.status_pembayaran || 'TIDAK ADA PINJAMAN'}</span></td>
                         <td class="text-end">${formatRp(angsuranPokok)}</td><td class="text-end">${formatRp(angsuranMargin)}</td><td class="text-end">${formatRp(angsuranDenda)}</td>
                         <td class="text-end fw-bold text-primary">${formatRp(totalAngsuran)}</td><td class="text-end fw-bold text-info">${formatRp(totalAngsuran)}</td>
                         <td class="text-end ${overdueClass}">${formatRp(tunggakanAngsuran)}</td><td class="text-center ${overdueClass}">${odHari}</td><td class="text-end ${overdueClass}">${formatRp(tunggakanDenda)}</td>
@@ -233,37 +214,8 @@
                         <td class="text-center fw-bold">${row.kol || '-'}</td><td class="text-center">-</td>
                     </tr>`;
                 });
-                
-                // Pasang Event Listener ke Dropdown JMO
-                document.querySelectorAll('.jmo-dropdown').forEach(selectEl => {
-                    selectEl.addEventListener('change', function() {
-                        const no_anggota = this.getAttribute('data-no');
-                        const new_status = this.value;
-                        this.classList.add('bg-warning'); // Efek Loading kuning
-                        
-                        fetch('/api/update_jmo', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ no_anggota: no_anggota, status_jmo: new_status })
-                        })
-                        .then(res => res.json())
-                        .then(res => {
-                            this.classList.remove('bg-warning');
-                            if(res.status === 'success') {
-                                this.classList.add('bg-success', 'text-white'); // Efek sukses hijau
-                                setTimeout(() => this.classList.remove('bg-success', 'text-white'), 1500);
-                            } else {
-                                alert('Gagal memperbarui status: ' + res.message);
-                            }
-                        })
-                        .catch(err => {
-                            this.classList.remove('bg-warning');
-                            console.error(err);
-                        });
-                    });
-                });
             } else {
-                tbody.innerHTML = '<tr><td colspan="37" class="text-center text-muted py-4">Semua tagihan berjalan dalam keadaan lunas / tidak ada data.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="27" class="text-center text-muted py-4">Semua tagihan berjalan dalam keadaan lunas / tidak ada data.</td></tr>';
             }
         }).catch(err => console.error(err));
     });

@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from datetime import datetime
 import json
 from db import get_db_connection
-from api_helpers import tambah_bulan, parse_float, parse_int, catat_jurnal
+from api_helpers import tambah_bulan, parse_float, parse_int, catat_jurnal, hitung_denda_keterlambatan
 
 api_transaksi_bp = Blueprint('api_transaksi', __name__)
 
@@ -14,20 +14,10 @@ def catat_jurnal_cabang(cursor, tanggal, account_code, keterangan, debit, kredit
     coa = cursor.fetchone()
     if coa:
         coa_id = coa[0] if isinstance(coa, tuple) else coa['id']
-        try:
-            cursor.execute("""
-                INSERT INTO jurnal_umum (tanggal, coa_id, keterangan, debit, kredit, cabang)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (tanggal, coa_id, keterangan, debit, kredit, cabang))
-        except Exception:
-            try:
-                cursor.execute("ALTER TABLE jurnal_umum ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
-                cursor.execute("""
-                    INSERT INTO jurnal_umum (tanggal, coa_id, keterangan, debit, kredit, cabang)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (tanggal, coa_id, keterangan, debit, kredit, cabang))
-            except Exception:
-                cursor.execute("INSERT INTO jurnal_umum (tanggal, coa_id, keterangan, debit, kredit) VALUES (%s, %s, %s, %s, %s)", (tanggal, coa_id, keterangan, debit, kredit))
+        cursor.execute("""
+            INSERT INTO jurnal_umum (tanggal, coa_id, keterangan, debit, kredit, cabang)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (tanggal, coa_id, keterangan, debit, kredit, cabang))
 
 # === API: PROSES PENCAIRAN & AUTO-GENERATE JADWAL ANGSURAN ===
 @api_transaksi_bp.route('/api/pencairan_multiguna', methods=['POST'])
@@ -36,17 +26,28 @@ def proses_pencairan():
     is_approval = data.get('is_approval_execution', False)
     approval_id = data.get('approval_id', None)
     
+    try:
+        data['besar_pinjaman'] = parse_float(data.get('besar_pinjaman'), 'Besar Pinjaman')
+        data['tenor'] = parse_int(data.get('tenor'), 'Tenor')
+        data['bunga_persen'] = parse_float(data.get('bunga_persen'), 'Bunga Persen')
+        if data.get('jenis_pencairan') == 'Tempo':
+            data['bunga_persen'] = 20.0
+        data['potongan_angsuran'] = parse_float(data.get('potongan_angsuran'), 'Potongan Angsuran')
+        data['potongan_dana_urgent'] = parse_float(data.get('potongan_dana_urgent'), 'Potongan Dana Urgent')
+        data['biaya_jamsostek'] = parse_float(data.get('biaya_jamsostek'), 'Biaya Jamsostek')
+        data['potongan_simpanan_pokok'] = parse_float(data.get('potongan_simpanan_pokok'), 'Potongan Simpanan Pokok')
+        data['potongan_adm'] = parse_float(data.get('potongan_adm'), 'Potongan Administrasi')
+        data['potongan_dana_kematian'] = parse_float(data.get('potongan_dana_kematian'), 'Potongan Dana Kematian')
+        data['potongan_ppap'] = parse_float(data.get('potongan_ppap'), 'Potongan PPAP')
+        data['terima_bersih'] = parse_float(data.get('terima_bersih'), 'Terima Bersih')
+    except ValueError as ve:
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+    
     # === SISTEM PENCEGATAN (INTERCEPT) UNTUK APPROVAL ===
     if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("CREATE TABLE IF NOT EXISTS approval_queue (id INT AUTO_INCREMENT PRIMARY KEY, tipe_transaksi VARCHAR(50), data_payload TEXT, diajukan_oleh VARCHAR(50), tanggal_pengajuan DATETIME DEFAULT CURRENT_TIMESTAMP, status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING', cabang VARCHAR(50))")
-            try:
-                cursor.execute("SELECT cabang FROM approval_queue LIMIT 1")
-                cursor.fetchall()
-            except:
-                cursor.execute("ALTER TABLE approval_queue ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
             cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Pencairan Multiguna', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
             conn.commit()
             return jsonify({'status': 'success', 'message': 'Transaksi diajukan! Menunggu Approval dari Manager.'}), 201
@@ -62,41 +63,41 @@ def proses_pencairan():
         jenis_pencairan = data.get('jenis_pencairan')
         tanggal_cair = data.get('tanggal_cair')
         tanggal_gajian = data.get('tanggal_gajian')
-        besar_pinjaman = parse_float(data.get('besar_pinjaman'), 'Besar Pinjaman')
-        tenor = parse_int(data.get('tenor'), 'Tenor')
-        bunga_persen = parse_float(data.get('bunga_persen'), 'Bunga Persen')
+        besar_pinjaman = data.get('besar_pinjaman')
+        tenor = data.get('tenor')
+        bunga_persen = data.get('bunga_persen')
         
-        # Jika pinjaman Tempo, paksa margin (bunga) menjadi 20%
-        if jenis_pencairan == 'Tempo':
-            bunga_persen = 20.0
-        
-        potongan_angsuran = parse_float(data.get('potongan_angsuran'), 'Potongan Angsuran')
-        potongan_dana_urgent = parse_float(data.get('potongan_dana_urgent'), 'Potongan Dana Urgent')
-        biaya_jamsostek = parse_float(data.get('biaya_jamsostek'), 'Biaya Jamsostek')
-        potongan_simpanan_pokok = parse_float(data.get('potongan_simpanan_pokok'), 'Potongan Simpanan Pokok')
-        potongan_adm = parse_float(data.get('potongan_adm'), 'Potongan Administrasi')
-        potongan_dana_kematian = parse_float(data.get('potongan_dana_kematian'), 'Potongan Dana Kematian')
-        potongan_ppap = parse_float(data.get('potongan_ppap'), 'Potongan PPAP')
-        terima_bersih = parse_float(data.get('terima_bersih'), 'Terima Bersih')
+        potongan_angsuran = data.get('potongan_angsuran')
+        potongan_dana_urgent = data.get('potongan_dana_urgent')
+        biaya_jamsostek = data.get('biaya_jamsostek')
+        potongan_simpanan_pokok = data.get('potongan_simpanan_pokok')
+        potongan_adm = data.get('potongan_adm')
+        potongan_dana_kematian = data.get('potongan_dana_kematian')
+        potongan_ppap = data.get('potongan_ppap')
+        terima_bersih = data.get('terima_bersih')
         
         query_pencairan = """
             INSERT INTO pencairan_multiguna_tempo (
                 no_anggota, nama_anggota, jenis_pencairan, tanggal_cair, tanggal_gajian, 
                 besar_pinjaman, potongan_angsuran, potongan_dana_urgent, biaya_jamsostek, 
                 potongan_simpanan_pokok, potongan_adm, potongan_dana_kematian, potongan_ppap, 
-                terima_bersih, tenor
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                terima_bersih, tenor, is_restruktur
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query_pencairan, (
             no_anggota, nama_anggota, jenis_pencairan, tanggal_cair, tanggal_gajian, besar_pinjaman, 
             potongan_angsuran, potongan_dana_urgent, biaya_jamsostek, potongan_simpanan_pokok, 
-            potongan_adm, potongan_dana_kematian, potongan_ppap, terima_bersih, tenor
+            potongan_adm, potongan_dana_kematian, potongan_ppap, terima_bersih, tenor, 0
         ))
         
         tagihan_pokok = besar_pinjaman / tenor if tenor > 0 else 0
         tagihan_margin = besar_pinjaman * (bunga_persen / 100)
         total_margin = tagihan_margin * tenor
         tgl_cair_obj = datetime.strptime(tanggal_cair, '%Y-%m-%d').date()
+        try:
+            base_date_obj = datetime.strptime(tanggal_gajian, '%Y-%m-%d').date() if tanggal_gajian else tgl_cair_obj
+        except:
+            base_date_obj = tgl_cair_obj
         
         query_angsuran = """
             INSERT INTO angsuran_multiguna_tempo (
@@ -108,7 +109,10 @@ def proses_pencairan():
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         for i in range(1, tenor + 1):
-            jatuh_tempo = tambah_bulan(tgl_cair_obj, i)
+            if tanggal_gajian:
+                jatuh_tempo = tambah_bulan(base_date_obj, i - 1)
+            else:
+                jatuh_tempo = tambah_bulan(base_date_obj, i)
             sisa_pokok = besar_pinjaman - (tagihan_pokok * (i - 1))
             sisa_margin_berjalan = total_margin - (tagihan_margin * (i - 1))
             cursor.execute(query_angsuran, (
@@ -142,11 +146,25 @@ def proses_pencairan():
         if potongan_ppap > 0: catat_jurnal_cabang(cursor, tanggal_cair, '2103', f"Jaminan PPAP - {nama_anggota}", 0, potongan_ppap, cabang_member)
         
         if potongan_angsuran > 0: 
-            # 1. Ambil data sisa hutang lama (Pokok & Margin)
-            cursor.execute("SELECT SUM(tagihan_pokok) as sisa_pokok, SUM(tagihan_margin) as sisa_margin FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            # 1. Ambil data sisa hutang lama (Pokok & Margin) - Kecualikan pinjaman yang baru saja diinsert
+            cursor.execute("SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR' AND tgl_pencairan != %s", (no_anggota, tanggal_cair))
             tagihan_lama = cursor.fetchone()
-            sisa_pokok_lama = float(tagihan_lama[0] or 0) if tagihan_lama else 0.0
-            sisa_margin_lama = float(tagihan_lama[1] or 0) if tagihan_lama else 0.0
+            
+            sisa_pokok_lama = 0.0
+            sisa_margin_lama = 0.0
+            if tagihan_lama:
+                sisa_pokok_lama = float(tagihan_lama[0] or 0) if isinstance(tagihan_lama, tuple) else float(tagihan_lama.get('sisa_pokok') or 0)
+                sisa_margin_lama = float(tagihan_lama[1] or 0) if isinstance(tagihan_lama, tuple) else float(tagihan_lama.get('sisa_margin') or 0)
+            
+            if (sisa_pokok_lama + sisa_margin_lama) > potongan_angsuran:
+                if sisa_pokok_lama >= potongan_angsuran:
+                    sisa_pokok_lama = potongan_angsuran
+                    sisa_margin_lama = 0
+                else:
+                    sisa_margin_lama = potongan_angsuran - sisa_pokok_lama
+                    
+            if sisa_pokok_lama == 0 and sisa_margin_lama == 0:
+                sisa_pokok_lama = potongan_angsuran
             
             # 2. Langsung melunasi Piutang Pokok, Margin, & Denda (Tanpa Dana Temporer)
             catat_jurnal_cabang(cursor, tanggal_cair, akun_piutang, f"Pelunasan Piutang Lama (Top-Up) - {nama_anggota}", 0, sisa_pokok_lama, cabang_member)
@@ -160,16 +178,16 @@ def proses_pencairan():
             cursor.execute("""
                 UPDATE angsuran_multiguna_tempo 
                 SET angsuran_pokok = tagihan_pokok, angsuran_margin = tagihan_margin, angsuran_denda = tagihan_denda, status = 'LUNAS TOP-UP', tgl_bayar = %s 
-                WHERE no_anggota = %s AND status = 'BELUM BAYAR'
-            """, (tanggal_cair, no_anggota))
+                WHERE no_anggota = %s AND status = 'BELUM BAYAR' AND tgl_pencairan != %s
+            """, (tanggal_cair, no_anggota, tanggal_cair))
             
         if potongan_dana_urgent > 0: 
             catat_jurnal_cabang(cursor, tanggal_cair, '1203', f"Potongan Pelunasan Dana Urgent - {nama_anggota}", 0, potongan_dana_urgent, cabang_member)
             cursor.execute("""
                 UPDATE angsuran_dana_urgent 
                 SET angsuran_pokok = tagihan_pokok, angsuran_margin = tagihan_margin, status = 'LUNAS TOP-UP', tgl_bayar = %s 
-                WHERE no_anggota = %s AND status = 'BELUM BAYAR'
-            """, (tanggal_cair, no_anggota))
+                WHERE no_anggota = %s AND status = 'BELUM BAYAR' AND tgl_pencairan != %s
+            """, (tanggal_cair, no_anggota, tanggal_cair))
 
         if is_approval and approval_id:
             cursor.execute("UPDATE approval_queue SET status = 'APPROVED' WHERE id = %s", (approval_id,))
@@ -193,16 +211,15 @@ def proses_pencairan_urgent():
     is_approval = data.get('is_approval_execution', False)
     approval_id = data.get('approval_id', None)
     
+    try:
+        data['jumlah_dana_urgent'] = parse_float(data.get('jumlah_dana_urgent'), 'Jumlah Dana Urgent')
+    except ValueError as ve:
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+        
     if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("CREATE TABLE IF NOT EXISTS approval_queue (id INT AUTO_INCREMENT PRIMARY KEY, tipe_transaksi VARCHAR(50), data_payload TEXT, diajukan_oleh VARCHAR(50), tanggal_pengajuan DATETIME DEFAULT CURRENT_TIMESTAMP, status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING', cabang VARCHAR(50))")
-            try:
-                cursor.execute("SELECT cabang FROM approval_queue LIMIT 1")
-                cursor.fetchall()
-            except:
-                cursor.execute("ALTER TABLE approval_queue ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
             cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Pencairan Dana Urgent', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
             conn.commit()
             return jsonify({'status': 'success', 'message': 'Transaksi diajukan! Menunggu Approval dari Manager.'}), 201
@@ -218,7 +235,7 @@ def proses_pencairan_urgent():
         jenis_dana_urgent = data.get('jenis_dana_urgent')
         tgl_pencairan = data.get('tanggal_pencairan_dana_urgent')
         tgl_pembayaran = data.get('tanggal_pembayaran_dana_urgent')
-        jumlah_dana_urgent = parse_float(data.get('jumlah_dana_urgent'), 'Jumlah Dana Urgent')
+        jumlah_dana_urgent = data.get('jumlah_dana_urgent')
         # Margin otomatis 20% dari pokok pinjaman dana urgent
         margin_dana_urgent = jumlah_dana_urgent * 0.20
         
@@ -264,8 +281,6 @@ def pengaturan_denda():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        # Pastikan tabel ada
-        cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
         if request.method == 'GET':
             cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
             row = cursor.fetchone()
@@ -294,83 +309,348 @@ def get_info_tagihan(no_anggota):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR' ORDER BY angsuran_ke ASC LIMIT 1", (no_anggota,))
-        tagihan_utama = cursor.fetchone()
-        cursor.execute("SELECT * FROM angsuran_dana_urgent WHERE no_anggota = %s AND status = 'BELUM BAYAR' ORDER BY tgl_pencairan ASC LIMIT 1", (no_anggota,))
-        tagihan_urgent = cursor.fetchone()
         
         tanggal_req = request.args.get('tanggal')
-        if tanggal_req:
-            try: today = datetime.strptime(tanggal_req[:10], '%Y-%m-%d').date()
-            except: today = datetime.now().date()
-        else:
-            today = datetime.now().date()
+        today = datetime.strptime(tanggal_req[:10], '%Y-%m-%d').date() if tanggal_req else datetime.now().date()
         
-        # Cek Mode Migrasi (Denda Aktif/Tidak)
-        cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
-        cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
-        p_row = cursor.fetchone()
-        denda_aktif = (p_row['nilai'] == '1') if p_row else True
+        # Query tunggal yang menggabungkan semua logika
+        # Mengambil tagihan multiguna & urgent, dan menghitung denda langsung di database
+        query = """
+            SELECT
+                data.*,
+                -- Kalkulasi Denda Real-time di SQL
+                GREATEST(0, 
+                    IF(
+                        (data.sisa_tagihan_pokok > 0.01 OR data.sisa_tagihan_margin > 0.01) AND denda.is_active,
+                        (
+                            (data.sisa_tagihan_pokok + data.sisa_tagihan_margin) 
+                            * CASE 
+                                WHEN data.jenis_pinjaman IN ('Tempo', 'Gaji', 'THR') THEN 0.007
+                                ELSE 0.005 
+                              END
+                            * GREATEST(0, DATEDIFF(%s, data.jatuh_tempo))
+                        ) + GREATEST(0, data.tagihan_denda - data.angsuran_denda),
+                        GREATEST(0, data.tagihan_denda - data.angsuran_denda)
+                    )
+                ) AS kalkulasi_denda,
+                GREATEST(0, DATEDIFF(%s, data.jatuh_tempo)) AS od_hari
+            FROM (
+                -- Query untuk Pinjaman Multiguna/Tempo
+                SELECT 
+                    'utama' AS `type`,
+                    amt.id, amt.no_anggota, amt.nama_anggota, amt.jenis_pinjaman, amt.tgl_pencairan, amt.jatuh_tempo,
+                    amt.sisa_pokok, amt.sisa_margin, amt.tenor, amt.angsuran_ke,
+                    amt.tagihan_pokok, amt.tagihan_margin, amt.tagihan_denda,
+                    amt.angsuran_pokok, amt.angsuran_margin, amt.angsuran_denda,
+                    (amt.tagihan_pokok - amt.angsuran_pokok) AS sisa_tagihan_pokok,
+                    (amt.tagihan_margin - amt.angsuran_margin) AS sisa_tagihan_margin
+                FROM (
+                    SELECT *, ROW_NUMBER() OVER(PARTITION BY tgl_pencairan ORDER BY angsuran_ke ASC) as rn
+                    FROM angsuran_multiguna_tempo 
+                    WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+                ) amt
+                WHERE amt.rn = 1
 
-        if tagihan_utama:
-            jt = tagihan_utama.get('jatuh_tempo')
-            if jt:
-                jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date() if isinstance(jt, str) else jt
-                last_pay = tagihan_utama.get('tgl_bayar')
-                if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(str(last_pay)[:10], '%Y-%m-%d').date()
-                base_date = jt
-                if last_pay and last_pay > jt: base_date = last_pay
-                
-                od_hari_sisa = max((today - base_date).days, 0)
-                tagihan_utama['od_hari'] = max((today - jt).days, 0)
-                
-                sisa_p = float(tagihan_utama.get('tagihan_pokok') or 0) - float(tagihan_utama.get('angsuran_pokok') or 0)
-                sisa_m = float(tagihan_utama.get('tagihan_margin') or 0) - float(tagihan_utama.get('angsuran_margin') or 0)
-                if sisa_p <= 0.01 and sisa_m <= 0.01:
-                    d_kalk = float(tagihan_utama.get('tagihan_denda') or 0) - float(tagihan_utama.get('angsuran_denda') or 0)
-                else:
-                    jenis = tagihan_utama.get('jenis_pinjaman')
-                    if jenis == 'Tempo':
-                        add_denda = (sisa_p + sisa_m) * 0.007 * od_hari_sisa
-                    else:
-                        add_denda = (sisa_p + sisa_m) * 0.005 * od_hari_sisa
-                    d_kalk = float(tagihan_utama.get('tagihan_denda') or 0) - float(tagihan_utama.get('angsuran_denda') or 0) + add_denda
-                tagihan_utama['kalkulasi_denda'] = max(0, d_kalk) if denda_aktif else 0
-            else:
-                tagihan_utama['od_hari'] = 0
-                tagihan_utama['kalkulasi_denda'] = 0
+                UNION ALL
 
-        if tagihan_urgent:
-            jt_urg = tagihan_urgent.get('tanggal_jatuh_tempo')
-            if jt_urg:
-                jt_urg = datetime.strptime(str(jt_urg)[:10], '%Y-%m-%d').date() if isinstance(jt_urg, str) else jt_urg
-                last_pay_urg = tagihan_urgent.get('tgl_bayar')
-                if isinstance(last_pay_urg, str) and last_pay_urg: last_pay_urg = datetime.strptime(str(last_pay_urg)[:10], '%Y-%m-%d').date()
-                base_date_urg = jt_urg
-                if last_pay_urg and last_pay_urg > jt_urg: base_date_urg = last_pay_urg
-                
-                od_hari_urg_sisa = max((today - base_date_urg).days, 0)
-                tagihan_urgent['od_hari'] = max((today - jt_urg).days, 0)
-                
-                sisa_p_urg = float(tagihan_urgent.get('tagihan_pokok') or 0) - float(tagihan_urgent.get('angsuran_pokok') or 0)
-                sisa_m_urg = float(tagihan_urgent.get('tagihan_margin') or 0) - float(tagihan_urgent.get('angsuran_margin') or 0)
-                if sisa_p_urg <= 0.01 and sisa_m_urg <= 0.01:
-                    d_kalk_urg = float(tagihan_urgent.get('tagihan_denda') or 0) - float(tagihan_urgent.get('angsuran_denda') or 0)
-                else:
-                    # Denda Dana Urgent 0.7% (Pokok + Margin)
-                    add_denda_urg = (sisa_p_urg + sisa_m_urg) * 0.007 * od_hari_urg_sisa
-                    d_kalk_urg = float(tagihan_urgent.get('tagihan_denda') or 0) - float(tagihan_urgent.get('angsuran_denda') or 0) + add_denda_urg
-                tagihan_urgent['kalkulasi_denda'] = max(0, d_kalk_urg) if denda_aktif else 0
-            else:
-                tagihan_urgent['od_hari'] = 0
-                tagihan_urgent['kalkulasi_denda'] = 0
+                -- Query untuk Pinjaman Dana Urgent
+                SELECT 
+                    'urgent' AS `type`,
+                    adu.id, adu.no_anggota, adu.nama_anggota, adu.jenis_dana_urgent AS jenis_pinjaman, adu.tgl_pencairan, adu.tanggal_jatuh_tempo AS jatuh_tempo,
+                    NULL AS sisa_pokok, NULL AS sisa_margin, 1 AS tenor, 1 AS angsuran_ke,
+                    adu.tagihan_pokok, adu.tagihan_margin, adu.tagihan_denda,
+                    adu.angsuran_pokok, adu.angsuran_margin, adu.angsuran_denda,
+                    (adu.tagihan_pokok - adu.angsuran_pokok) AS sisa_tagihan_pokok,
+                    (adu.tagihan_margin - adu.angsuran_margin) AS sisa_tagihan_margin
+                FROM (
+                    SELECT *, ROW_NUMBER() OVER(PARTITION BY tgl_pencairan ORDER BY id ASC) as rn
+                    FROM angsuran_dana_urgent 
+                    WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+                ) adu
+                WHERE adu.rn = 1
+            ) AS data
+            -- Cross join untuk mendapatkan status denda aktif secara aman
+            CROSS JOIN (
+                SELECT COALESCE((SELECT nilai = '1' FROM pengaturan WHERE kunci = 'denda_aktif'), 1) AS is_active
+            ) AS denda;
+        """
+        
+        # Parameter untuk query: today, today, no_anggota, no_anggota
+        params = (today, today, no_anggota, no_anggota)
+        cursor.execute(query, params)
+        all_tagihan = cursor.fetchall()
+        
+        # Pisahkan kembali hasilnya menjadi data_utama dan data_urgent untuk frontend
+        tagihan_utama_list = []
+        tagihan_urgent_list = []
+        
+        for tagihan in all_tagihan:
+            # Menambahkan kembali field tunggakan untuk kompatibilitas frontend
+            tagihan['tunggakan_pokok'] = tagihan['sisa_tagihan_pokok']
+            tagihan['tunggakan_margin'] = tagihan['sisa_tagihan_margin']
+            tagihan['tunggakan_denda'] = tagihan['kalkulasi_denda']
+            
+            if tagihan['type'] == 'utama':
+                tagihan_utama_list.append(tagihan)
+            else: # urgent
+                # Frontend untuk kartu urgent menggunakan key yang berbeda
+                tagihan['jenis_dana_urgent'] = tagihan['jenis_pinjaman']
+                tagihan['tanggal_jatuh_tempo'] = tagihan['jatuh_tempo']
+                tagihan_urgent_list.append(tagihan)
 
-        return jsonify({'status': 'success', 'data_utama': tagihan_utama, 'data_urgent': tagihan_urgent}), 200
+        return jsonify({'status': 'success', 'data_utama': tagihan_utama_list, 'data_urgent': tagihan_urgent_list}), 200
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'trace': traceback.format_exc()}), 500
     finally:
         if cursor: cursor.close()
         if conn: conn.close()
+
+# === API: RESTRUKTURISASI PINJAMAN MACET ===
+@api_transaksi_bp.route('/api/restruktur_pinjaman', methods=['POST'])
+def restruktur_pinjaman():
+    data = request.json
+    is_approval = data.get('is_approval_execution', False)
+    approval_id = data.get('approval_id', None)
+
+    # --- Validasi Input ---
+    try:
+        no_anggota = data.get('no_anggota')
+        tgl_pencairan_lama = data.get('tgl_pencairan_lama')
+        tanggal_restruktur = data.get('tanggal_restruktur') or datetime.now().strftime('%Y-%m-%d')
+        tenor_baru = parse_int(data.get('tenor_baru'), 'Tenor Baru')
+        bunga_persen_baru = parse_float(data.get('bunga_persen_baru'), 'Bunga Baru')
+        jenis_pinjaman_baru = data.get('jenis_pinjaman_baru', 'Multiguna') # Default to Multiguna
+        if not all([no_anggota, tgl_pencairan_lama, tenor_baru, bunga_persen_baru]):
+            raise ValueError("Data untuk restrukturisasi tidak lengkap.")
+    except ValueError as ve:
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+
+    # --- Approval Intercept ---
+    if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", 
+                           ('Restrukturisasi Pinjaman', json.dumps(data), session.get('nama_lengkap', 'Admin'), session.get('cabang') or 'GAS'))
+            conn.commit()
+            return jsonify({'status': 'success', 'message': 'Restrukturisasi diajukan! Menunggu Approval dari Manager.'}), 201
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+        finally:
+            cursor.close()
+            conn.close()
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+
+        # 1. Ambil data anggota dan cabang
+        cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+        member = cursor.fetchone()
+        if not member:
+            raise ValueError("Anggota tidak ditemukan.")
+        nama_anggota = member['nama_anggota']
+        cabang_member = member.get('cabang') or session.get('cabang', 'GAS')
+
+        # 2. Hitung total sisa kewajiban dari pinjaman lama
+        cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
+        p_row = cursor.fetchone()
+        denda_aktif = (p_row['nilai'] == '1') if p_row else True
+        
+        sisa_pokok_lama = 0.0
+        sisa_margin_lama = 0.0
+        denda_lama = 0.0
+        jenis_pinjaman_lama = 'Multiguna'
+
+        # Ambil semua angsuran belum bayar dari pinjaman lama
+        cursor.execute("""
+            SELECT * FROM angsuran_multiguna_tempo 
+            WHERE no_anggota = %s AND tgl_pencairan = %s AND status = 'BELUM BAYAR'
+        """, (no_anggota, tgl_pencairan_lama))
+        angsuran_lama_list = cursor.fetchall()
+
+        if not angsuran_lama_list:
+            raise ValueError("Tidak ada angsuran yang belum dibayar untuk pinjaman ini.")
+
+        for angsuran in angsuran_lama_list:
+            jenis_pinjaman_lama = angsuran.get('jenis_pinjaman', 'Multiguna')
+            sisa_pokok_lama += float(angsuran['tagihan_pokok'] or 0) - float(angsuran['angsuran_pokok'] or 0)
+            sisa_margin_lama += float(angsuran['tagihan_margin'] or 0) - float(angsuran['angsuran_margin'] or 0)
+            
+            denda_calc, _ = hitung_denda_keterlambatan(
+                jatuh_tempo=angsuran.get('jatuh_tempo'),
+                tgl_bayar=angsuran.get('tgl_bayar'),
+                tagihan_pokok=angsuran.get('tagihan_pokok'),
+                tagihan_margin=angsuran.get('tagihan_margin'),
+                angsuran_pokok=angsuran.get('angsuran_pokok'),
+                angsuran_margin=angsuran.get('angsuran_margin'),
+                tagihan_denda_db=angsuran.get('tagihan_denda'),
+                angsuran_denda=angsuran.get('angsuran_denda'),
+                denda_aktif=denda_aktif,
+                jenis_pinjaman=jenis_pinjaman_lama,
+                tgl_referensi=datetime.strptime(tanggal_restruktur, '%Y-%m-%d').date()
+            )
+            denda_lama += denda_calc
+
+        besar_pinjaman_baru = sisa_pokok_lama + sisa_margin_lama + denda_lama
+        if besar_pinjaman_baru <= 0.01:
+            raise ValueError("Total kewajiban pinjaman lama adalah nol. Tidak ada yang perlu direstruktur.")
+
+        # 3. Tutup pinjaman lama
+        cursor.execute("""
+            UPDATE angsuran_multiguna_tempo 
+            SET status = 'LUNAS RESTRUKTUR', tgl_bayar = %s
+            WHERE no_anggota = %s AND tgl_pencairan = %s AND status = 'BELUM BAYAR'
+        """, (tanggal_restruktur, no_anggota, tgl_pencairan_lama))
+
+        # 4. Buat pencairan baru (tanpa kas keluar)
+        cursor.execute("""
+            INSERT INTO pencairan_multiguna_tempo (
+                no_anggota, nama_anggota, jenis_pencairan, tanggal_cair, besar_pinjaman, 
+                terima_bersih, tenor, is_restruktur
+            ) VALUES (%s, %s, %s, %s, %s, 0, %s, 1)
+        """, (no_anggota, nama_anggota, jenis_pinjaman_baru, tanggal_restruktur, besar_pinjaman_baru, tenor_baru))
+        
+        # 5. Buat jadwal angsuran baru
+        tagihan_pokok_baru = besar_pinjaman_baru / tenor_baru if tenor_baru > 0 else 0
+        tagihan_margin_baru = besar_pinjaman_baru * (bunga_persen_baru / 100)
+        total_margin_baru = tagihan_margin_baru * tenor_baru
+        tgl_restruktur_obj = datetime.strptime(tanggal_restruktur, '%Y-%m-%d').date()
+
+        for i in range(1, tenor_baru + 1):
+            jatuh_tempo_baru = tambah_bulan(tgl_restruktur_obj, i)
+            sisa_pokok_berjalan = besar_pinjaman_baru - (tagihan_pokok_baru * (i - 1))
+            sisa_margin_berjalan = total_margin_baru - (tagihan_margin_baru * (i - 1))
+            cursor.execute("""
+                INSERT INTO angsuran_multiguna_tempo (no_anggota, nama_anggota, jenis_pinjaman, tgl_pencairan, jatuh_tempo, besar_pinjaman, tenor, bunga_persen, margin, total_margin, sisa_pokok, sisa_margin, angsuran_ke, tagihan_pokok, tagihan_margin, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'BELUM BAYAR')
+            """, (no_anggota, nama_anggota, jenis_pinjaman_baru, tanggal_restruktur, jatuh_tempo_baru, besar_pinjaman_baru, tenor_baru, bunga_persen_baru, tagihan_margin_baru, total_margin_baru, sisa_pokok_berjalan, sisa_margin_berjalan, i, tagihan_pokok_baru, tagihan_margin_baru))
+
+        # 6. Jurnal Akuntansi (Penting!)
+        akun_piutang_lama = '1201' if jenis_pinjaman_lama == 'Multiguna' else '1202'
+        akun_pendapatan_lama = '4101' if jenis_pinjaman_lama == 'Multiguna' else '4102'
+        akun_piutang_baru = '1201' if jenis_pinjaman_baru == 'Multiguna' else '1202'
+        
+        catat_jurnal_cabang(cursor, tanggal_restruktur, akun_piutang_baru, f"Pencairan Restruktur - {nama_anggota}", besar_pinjaman_baru, 0, cabang_member)
+        if sisa_pokok_lama > 0: catat_jurnal_cabang(cursor, tanggal_restruktur, akun_piutang_lama, f"Pelunasan Pokok (Restruktur) - {nama_anggota}", 0, sisa_pokok_lama, cabang_member)
+        if sisa_margin_lama > 0: catat_jurnal_cabang(cursor, tanggal_restruktur, akun_pendapatan_lama, f"Pendapatan Margin (Restruktur) - {nama_anggota}", 0, sisa_margin_lama, cabang_member)
+        if denda_lama > 0: catat_jurnal_cabang(cursor, tanggal_restruktur, '4106', f"Pendapatan Denda (Restruktur) - {nama_anggota}", 0, denda_lama, cabang_member)
+
+        # 7. Update status approval jika ini adalah eksekusi
+        if is_approval and approval_id:
+            cursor.execute("UPDATE approval_queue SET status = 'APPROVED' WHERE id = %s", (approval_id,))
+            
+        conn.commit()
+        return jsonify({'status': 'success', 'message': f'Pinjaman berhasil direstruktur! Jadwal angsuran baru ({tenor_baru} bulan) telah dibuat.'}), 201
+
+    except ValueError as ve:
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+    except Exception as e:
+        if conn: conn.rollback()
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'trace': traceback.format_exc()}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
+
+def _proses_satu_pembayaran(cursor, payment_data, shared_data, config):
+    """
+    Fungsi helper terpusat untuk memproses satu kartu pembayaran (baik utama maupun urgent).
+    Mengembalikan sisa gaji berjalan yang telah diperbarui dan info untuk struk.
+    """
+    id_tagihan = payment_data.get('id_tagihan')
+    if not id_tagihan:
+        return shared_data['sisa_gaji_berjalan'], None
+
+    log_name = config['log_name']
+    pokok = parse_float(payment_data.get('nominal_pokok'), f"Nominal Pokok {log_name}")
+    margin = parse_float(payment_data.get('nominal_margin'), f"Nominal Margin {log_name}")
+    denda = parse_float(payment_data.get('nominal_denda'), f"Nominal Denda {log_name}")
+    simpanan_wajib = parse_float(payment_data.get('simpanan_wajib'), f"Titipan Simpanan Wajib {log_name}")
+    edc = parse_float(payment_data.get('edc'), f"Biaya EDC {log_name}")
+    edc_val_to_db = edc if edc > 0 else None
+    angsuran_ke = payment_data.get('angsuran_ke')
+
+    query_select = f"""
+        SELECT angsuran_pokok, angsuran_margin, angsuran_denda, tagihan_pokok, tagihan_margin, tagihan_denda, 
+               {config['date_column']} as jatuh_tempo, tgl_bayar, edc, sisa_gaji, gaji_awal, 
+               {config['type_column']} as jenis_pinjaman 
+        FROM {config['table_name']} WHERE id=%s FOR UPDATE
+    """
+    cursor.execute(query_select, (id_tagihan,))
+    row = cursor.fetchone()
+    if not row:
+        return shared_data['sisa_gaji_berjalan'], None
+
+    prev_p, prev_m, prev_d = float(row.get('angsuran_pokok') or 0), float(row.get('angsuran_margin') or 0), float(row.get('angsuran_denda') or 0)
+    tag_p, tag_m, tag_d_db = float(row.get('tagihan_pokok') or 0), float(row.get('tagihan_margin') or 0), float(row.get('tagihan_denda') or 0)
+    jt, last_pay, j_pinjaman = row.get('jatuh_tempo'), row.get('tgl_bayar'), row.get('jenis_pinjaman', config['default_type'])
+    
+    new_p, new_m, new_d = prev_p + pokok, prev_m + margin, prev_d + denda
+    
+    if new_p > (tag_p + 0.01) or new_m > (tag_m + 0.01):
+        raise ValueError(f"Pembayaran melebihi sisa tagihan {log_name} yang harus dibayar!")
+
+    today_d = datetime.strptime(shared_data['tanggal_bayar'][:10], '%Y-%m-%d').date()
+    cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
+    p_row = cursor.fetchone()
+    denda_aktif = (p_row['nilai'] == '1') if p_row else True
+    
+    denda_berjalan_calc, _ = hitung_denda_keterlambatan(
+        jatuh_tempo=jt, tgl_bayar=last_pay, tagihan_pokok=tag_p, tagihan_margin=tag_m,
+        angsuran_pokok=prev_p, angsuran_margin=prev_m, tagihan_denda_db=tag_d_db, angsuran_denda=0,
+        denda_aktif=denda_aktif, jenis_pinjaman=j_pinjaman, tgl_referensi=today_d
+    )
+    curr_tag_d = denda_berjalan_calc
+    
+    sisa_p_baru, sisa_m_baru, sisa_d_baru = tag_p - new_p, tag_m - new_m, curr_tag_d - new_d
+    status_baru = 'LUNAS' if sisa_p_baru <= 0.01 and sisa_m_baru <= 0.01 and sisa_d_baru <= 0.01 else 'BELUM BAYAR'
+
+    total_potongan_kartu = pokok + margin + denda + simpanan_wajib + edc
+    sisa_gaji_berjalan = shared_data['sisa_gaji_berjalan']
+    if shared_data['gaji_awal'] > 0:
+        sisa_gaji_berjalan -= total_potongan_kartu
+
+    update_fields = {
+        'angsuran_pokok': new_p, 'angsuran_margin': new_m, 'angsuran_denda': new_d,
+        'tagihan_denda': curr_tag_d, 'status': status_baru, 'tgl_bayar': shared_data['tanggal_bayar'],
+        'edc': edc_val_to_db, 'gaji_awal': shared_data['gaji_awal'], 'sisa_gaji': sisa_gaji_berjalan,
+        'simpanan_wajib_bayar': simpanan_wajib
+    }
+    if angsuran_ke is not None and str(angsuran_ke).strip() != "" and config['table_name'] == 'angsuran_multiguna_tempo':
+        update_fields['angsuran_ke'] = angsuran_ke
+    
+    set_clause = ", ".join([f"{key}=%s" for key in update_fields.keys()])
+    values = list(update_fields.values()) + [id_tagihan]
+    
+    query_update = f"UPDATE {config['table_name']} SET {set_clause} WHERE id=%s"
+    cursor.execute(query_update, tuple(values))
+
+    akun_piutang = config['akun_piutang_map'].get(j_pinjaman, list(config['akun_piutang_map'].values())[0])
+    akun_pendapatan = config['akun_pendapatan_map'].get(j_pinjaman, list(config['akun_pendapatan_map'].values())[0])
+    
+    catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], '1101', f"Terima Angsuran {j_pinjaman} - {shared_data['nama_anggota']}", (pokok + margin + denda), 0, shared_data['cabang_member'])
+    if edc > 0: catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], '1101', f"Terima EDC/Admin {j_pinjaman} - {shared_data['nama_anggota']}", edc, 0, shared_data['cabang_member'])
+    
+    catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], akun_piutang, f"Pelunasan Pokok {j_pinjaman} - {shared_data['nama_anggota']}", 0, pokok, shared_data['cabang_member'])
+    catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], akun_pendapatan, f"Pendapatan Margin {j_pinjaman} - {shared_data['nama_anggota']}", 0, margin, shared_data['cabang_member'])
+    if denda > 0: catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], config['akun_denda'], f"Pendapatan Denda {j_pinjaman} - {shared_data['nama_anggota']}", 0, denda, shared_data['cabang_member'])
+    if edc > 0: catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], '4105', f"Pendapatan EDC/Admin {j_pinjaman} - {shared_data['nama_anggota']}", 0, edc, shared_data['cabang_member'])
+
+    if simpanan_wajib > 0 and shared_data['no_anggota']:
+        cursor.execute("SELECT id FROM simpanan WHERE nomor_anggota=%s", (shared_data['no_anggota'],))
+        if cursor.fetchone():
+            cursor.execute("UPDATE simpanan SET simpanan_wajib=simpanan_wajib+%s, total_simpanan=total_simpanan+%s WHERE nomor_anggota=%s", (simpanan_wajib, simpanan_wajib, shared_data['no_anggota']))
+        else:
+            cursor.execute("INSERT INTO simpanan (nomor_anggota, nama_anggota, simpanan_wajib, simpanan_pokok, total_simpanan) VALUES (%s, %s, %s, 0, %s)", (shared_data['no_anggota'], shared_data['nama_anggota'], simpanan_wajib, simpanan_wajib))
+        
+        catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], '1101', f"Terima Simpanan Wajib ({log_name}) - {shared_data['nama_anggota']}", simpanan_wajib, 0, shared_data['cabang_member'])
+        catat_jurnal_cabang(cursor, shared_data['tanggal_bayar'], '3102', f"Simpanan Wajib ({log_name}) - {shared_data['nama_anggota']}", 0, simpanan_wajib, shared_data['cabang_member'])
+
+    cetak_info = {'jenis': config['type_for_cetak'], 'id': id_tagihan}
+    return sisa_gaji_berjalan, cetak_info
 
 @api_transaksi_bp.route('/api/bayar_angsuran', methods=['POST'])
 def bayar_angsuran():
@@ -378,223 +658,56 @@ def bayar_angsuran():
     cursor = None
     try:
         data = request.get_json(silent=True) or {}
-            
+        gaji_awal = parse_float(data.get('gaji_awal'), 'Gaji Awal Keseluruhan')
+
         conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # === Auto-Migrate Kolom EDC dan Sisa Gaji Jika Belum Ada ===
-        try:
-            cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'edc'")
-            if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN edc VARCHAR(50) DEFAULT '-'")
-            cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'sisa_gaji'")
-            if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0")
-            cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'edc'")
-            if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN edc VARCHAR(50) DEFAULT '-'")
-            cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'sisa_gaji'")
-            if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0")
-        except Exception: pass
-        
+        cursor = conn.cursor(dictionary=True)
         conn.start_transaction()
-        tanggal_bayar = data.get('tanggal_bayar') or datetime.now().strftime('%Y-%m-%d')
-        nama_anggota = data.get('nama_anggota', 'Anggota')
-        
-        no_angg_byr = data.get('no_anggota')
-        if not no_angg_byr and data.get('id_utama'):
-            cursor.execute("SELECT no_anggota FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
-            r = cursor.fetchone(); no_angg_byr = r[0] if isinstance(r, tuple) else r['no_anggota'] if r else None
-        if not no_angg_byr and data.get('id_urgent'):
-            cursor.execute("SELECT no_anggota FROM angsuran_dana_urgent WHERE id=%s", (data['id_urgent'],))
-            r = cursor.fetchone(); no_angg_byr = r[0] if isinstance(r, tuple) else r['no_anggota'] if r else None
-            
-        cabang_member = session.get('cabang', 'GAS')
-        if no_angg_byr:
-            cursor.execute("SELECT cabang FROM identitas WHERE no_anggota = %s", (no_angg_byr,))
+
+        shared_data = {
+            'tanggal_bayar': data.get('tanggal_bayar') or datetime.now().strftime('%Y-%m-%d'),
+            'nama_anggota': data.get('nama_anggota', 'Anggota'),
+            'no_anggota': data.get('no_anggota'),
+            'gaji_awal': gaji_awal,
+            'sisa_gaji_berjalan': gaji_awal,
+            'cabang_member': session.get('cabang', 'GAS')
+        }
+
+        if shared_data['no_anggota']:
+            cursor.execute("SELECT cabang FROM identitas WHERE no_anggota = %s", (shared_data['no_anggota'],))
             cab_row = cursor.fetchone()
-            if cab_row:
-                c = cab_row[0] if isinstance(cab_row, tuple) else cab_row.get('cabang')
-                if c: cabang_member = c
+            if cab_row and cab_row.get('cabang'):
+                shared_data['cabang_member'] = cab_row['cabang']
         
-        if data.get('bayar_utama') and data.get('id_utama'):
-            pokok = parse_float(data.get('nominal_pokok_utama'), 'Nominal Pokok Utama')
-            margin = parse_float(data.get('nominal_margin_utama'), 'Nominal Margin Utama')
-            denda = parse_float(data.get('nominal_denda_utama'), 'Nominal Denda Utama')
-            angsuran_ke_utama = data.get('angsuran_ke_utama')
-            
-            cursor.execute("SELECT angsuran_pokok, angsuran_margin, angsuran_denda, tagihan_pokok, tagihan_margin, tagihan_denda, jatuh_tempo, tgl_bayar, edc, sisa_gaji, jenis_pinjaman FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
-            row_u = cursor.fetchone()
-            
-            if row_u:
-                prev_p = float(row_u['angsuran_pokok'] if isinstance(row_u, dict) else row_u[0] or 0)
-                prev_m = float(row_u['angsuran_margin'] if isinstance(row_u, dict) else row_u[1] or 0)
-                prev_d = float(row_u['angsuran_denda'] if isinstance(row_u, dict) else row_u[2] or 0)
-                tag_p = float(row_u['tagihan_pokok'] if isinstance(row_u, dict) else row_u[3] or 0)
-                tag_m = float(row_u['tagihan_margin'] if isinstance(row_u, dict) else row_u[4] or 0)
-                tag_d_db = float(row_u['tagihan_denda'] if isinstance(row_u, dict) else row_u[5] or 0)
-                jt = row_u['jatuh_tempo'] if isinstance(row_u, dict) else row_u[6]
-                last_pay = row_u['tgl_bayar'] if isinstance(row_u, dict) else row_u[7]
-                exist_edc = row_u['edc'] if isinstance(row_u, dict) else row_u[8]
-                exist_sg = row_u['sisa_gaji'] if isinstance(row_u, dict) else row_u[9]
-                j_pinjaman = row_u['jenis_pinjaman'] if isinstance(row_u, dict) else row_u[10]
-            else:
-                prev_p, prev_m, prev_d, tag_p, tag_m, tag_d_db, jt, last_pay, exist_edc, exist_sg, j_pinjaman = 0, 0, 0, 0, 0, 0, None, None, '-', 0, 'Multiguna'
-                
-            new_p = prev_p + pokok
-            new_m = prev_m + margin
-            new_d = prev_d + denda
-            
-            if new_p > (tag_p + 0.01) or new_m > (tag_m + 0.01):
-                raise ValueError("Pembayaran melebihi sisa tagihan utama yang harus dibayar!")
+        cetak_info_list = []
 
-            edc_in = data.get('edc_utama')
-            edc_str = edc_in if edc_in is not None else exist_edc
-            edc_val = parse_float(edc_in, 'Biaya EDC Utama') if edc_in is not None else 0.0
-            sg_in = data.get('sisa_gaji_utama')
-            sisa_gaji = parse_float(sg_in, 'Sisa Gaji Utama') if sg_in is not None else exist_sg
+        configs = {
+            'utama': {
+                'table_name': 'angsuran_multiguna_tempo', 'date_column': 'jatuh_tempo',
+                'type_column': 'jenis_pinjaman', 'default_type': 'Multiguna',
+                'akun_piutang_map': {'Multiguna': '1201', 'Tempo': '1202'},
+                'akun_pendapatan_map': {'Multiguna': '4101', 'Tempo': '4102'},
+                'akun_denda': '4106', 'log_name': 'Utama', 'type_for_cetak': 'utama'
+            },
+            'urgent': {
+                'table_name': 'angsuran_dana_urgent', 'date_column': 'tanggal_jatuh_tempo',
+                'type_column': 'jenis_dana_urgent', 'default_type': 'Gaji',
+                'akun_piutang_map': {'Gaji': '1203', 'THR': '1204'},
+                'akun_pendapatan_map': {'Gaji': '4103', 'THR': '4104'},
+                'akun_denda': '4107', 'log_name': 'Urgent', 'type_for_cetak': 'urgent'
+            }
+        }
 
-            today_d = datetime.strptime(tanggal_bayar[:10], '%Y-%m-%d').date()
-            if isinstance(jt, str): jt = datetime.strptime(jt[:10], '%Y-%m-%d').date()
-            if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(last_pay[:10], '%Y-%m-%d').date()
-            
-            base_date = jt
-            if last_pay and last_pay > jt: base_date = last_pay
-            
-            od_h_sisa = max((today_d - base_date).days, 0) if base_date else 0
-            
-            cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
-            cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
-            p_row = cursor.fetchone()
-            denda_aktif = (p_row['nilai'] == '1') if isinstance(p_row, dict) else (p_row[0] == '1') if p_row else True
-            
-            curr_tag_d = tag_d_db
-            sisa_p_before = max(0, tag_p - prev_p)
-            sisa_m_before = max(0, tag_m - prev_m)
-            if sisa_p_before > 0.01 or sisa_m_before > 0.01:
-                if denda_aktif:
-                    if j_pinjaman == 'Tempo':
-                        curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.007 * od_h_sisa)
-                    else:
-                        curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.005 * od_h_sisa)
-            
-            sisa_p_baru = tag_p - new_p
-            sisa_m_baru = tag_m - new_m
-            sisa_d_baru = curr_tag_d - new_d
-            status_baru = 'LUNAS' if sisa_p_baru <= 0.01 and sisa_m_baru <= 0.01 and sisa_d_baru <= 0.01 else 'BELUM BAYAR'
-
-            if angsuran_ke_utama is not None and str(angsuran_ke_utama).strip() != "":
-                cursor.execute("""
-                    UPDATE angsuran_multiguna_tempo SET angsuran_pokok=%s, angsuran_margin=%s, angsuran_denda=%s, tagihan_denda=%s, status=%s, tgl_bayar=%s, edc=%s, sisa_gaji=%s, angsuran_ke=%s WHERE id=%s
-                """, (new_p, new_m, new_d, curr_tag_d, status_baru, tanggal_bayar, edc_str, sisa_gaji, angsuran_ke_utama, data['id_utama']))
-            else:
-                cursor.execute("UPDATE angsuran_multiguna_tempo SET angsuran_pokok=%s, angsuran_margin=%s, angsuran_denda=%s, tagihan_denda=%s, status=%s, tgl_bayar=%s, edc=%s, sisa_gaji=%s WHERE id=%s", (new_p, new_m, new_d, curr_tag_d, status_baru, tanggal_bayar, edc_str, sisa_gaji, data['id_utama']))
-            
-            cursor.execute("SELECT jenis_pinjaman FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
-            row_utama = cursor.fetchone()
-            j_pinjaman = row_utama[0] if isinstance(row_utama, tuple) else row_utama['jenis_pinjaman'] if row_utama else 'Multiguna'
-            akun_piutang = '1201' if j_pinjaman == 'Multiguna' else '1202'
-            akun_pendapatan = '4101' if j_pinjaman == 'Multiguna' else '4102'
-            
-            catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Terima Angsuran {j_pinjaman} - {nama_anggota}", (pokok+margin+denda), 0, cabang_member)
-            if edc_val > 0:
-                catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Terima EDC/Admin {j_pinjaman} - {nama_anggota}", edc_val, 0, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_bayar, akun_piutang, f"Pelunasan Pokok {j_pinjaman} - {nama_anggota}", 0, pokok, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_bayar, akun_pendapatan, f"Pendapatan Margin {j_pinjaman} - {nama_anggota}", 0, margin, cabang_member)
-            if denda > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4106', f"Pendapatan Denda {j_pinjaman} - {nama_anggota}", 0, denda, cabang_member)
-            if edc_val > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4105', f"Pendapatan EDC/Admin {j_pinjaman} - {nama_anggota}", 0, edc_val, cabang_member)
-
-            simpanan_wajib = parse_float(data.get('nominal_simpanan_wajib'), 'Titipan Simpanan Wajib')
-            if simpanan_wajib > 0:
-                no = data.get('no_anggota')
-                if not no:
-                    cursor.execute("SELECT no_anggota FROM angsuran_multiguna_tempo WHERE id=%s", (data['id_utama'],))
-                    row_no = cursor.fetchone()
-                    if row_no:
-                        no = row_no[0] if isinstance(row_no, tuple) else row_no['no_anggota']
-                
-                if no:
-                    cursor.execute("SELECT id FROM simpanan WHERE nomor_anggota=%s", (no,))
-                    if cursor.fetchone(): cursor.execute("UPDATE simpanan SET simpanan_wajib=simpanan_wajib+%s, total_simpanan=total_simpanan+%s WHERE nomor_anggota=%s", (simpanan_wajib, simpanan_wajib, no))
-                    else: cursor.execute("INSERT INTO simpanan (nomor_anggota, nama_anggota, simpanan_wajib, simpanan_pokok, total_simpanan) VALUES (%s, %s, %s, 0, %s)", (no, nama_anggota, simpanan_wajib, simpanan_wajib))
-                    catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Terima Simpanan Wajib - {nama_anggota}", simpanan_wajib, 0, cabang_member)
-                    catat_jurnal_cabang(cursor, tanggal_bayar, '3102', f"Simpanan Wajib - {nama_anggota}", 0, simpanan_wajib, cabang_member)
-
-        if data.get('bayar_urgent') and data.get('id_urgent'):
-            pokok = parse_float(data.get('nominal_pokok_urgent'), 'Nominal Pokok Urgent')
-            margin = parse_float(data.get('nominal_margin_urgent'), 'Nominal Margin Urgent')
-            denda = parse_float(data.get('nominal_denda_urgent'), 'Nominal Denda Urgent')
-            
-            cursor.execute("SELECT angsuran_pokok, angsuran_margin, angsuran_denda, tagihan_pokok, tagihan_margin, tagihan_denda, tanggal_jatuh_tempo, tgl_bayar, edc, sisa_gaji FROM angsuran_dana_urgent WHERE id=%s", (data['id_urgent'],))
-            row_u = cursor.fetchone()
-            if row_u:
-                prev_p = float(row_u['angsuran_pokok'] if isinstance(row_u, dict) else row_u[0] or 0)
-                prev_m = float(row_u['angsuran_margin'] if isinstance(row_u, dict) else row_u[1] or 0)
-                prev_d = float(row_u['angsuran_denda'] if isinstance(row_u, dict) else row_u[2] or 0)
-                tag_p = float(row_u['tagihan_pokok'] if isinstance(row_u, dict) else row_u[3] or 0)
-                tag_m = float(row_u['tagihan_margin'] if isinstance(row_u, dict) else row_u[4] or 0)
-                tag_d_db = float(row_u['tagihan_denda'] if isinstance(row_u, dict) else row_u[5] or 0)
-                jt = row_u['tanggal_jatuh_tempo'] if isinstance(row_u, dict) else row_u[6]
-                last_pay = row_u['tgl_bayar'] if isinstance(row_u, dict) else row_u[7]
-                exist_edc = row_u['edc'] if isinstance(row_u, dict) else row_u[8]
-                exist_sg = row_u['sisa_gaji'] if isinstance(row_u, dict) else row_u[9]
-            else:
-                prev_p, prev_m, prev_d, tag_p, tag_m, tag_d_db, jt, last_pay, exist_edc, exist_sg = 0, 0, 0, 0, 0, 0, None, None, '-', 0
-                
-            new_p = prev_p + pokok
-            new_m = prev_m + margin
-            new_d = prev_d + denda
-            
-            if new_p > (tag_p + 0.01) or new_m > (tag_m + 0.01):
-                raise ValueError("Pembayaran melebihi sisa tagihan urgent yang harus dibayar!")
-
-            edc_in = data.get('edc_urgent')
-            edc_urg_str = edc_in if edc_in is not None else exist_edc
-            edc_urg_val = parse_float(edc_in, 'Biaya EDC Urgent') if edc_in is not None else 0.0
-            sg_in = data.get('sisa_gaji_urgent')
-            sisa_gaji = parse_float(sg_in, 'Sisa Gaji Urgent') if sg_in is not None else exist_sg
-
-            today_d = datetime.strptime(tanggal_bayar[:10], '%Y-%m-%d').date()
-            if isinstance(jt, str): jt = datetime.strptime(jt[:10], '%Y-%m-%d').date()
-            if isinstance(last_pay, str) and last_pay: last_pay = datetime.strptime(last_pay[:10], '%Y-%m-%d').date()
-            
-            base_date = jt
-            if last_pay and last_pay > jt: base_date = last_pay
-            
-            od_h_sisa = max((today_d - base_date).days, 0) if base_date else 0
-            
-            cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
-            cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
-            p_row = cursor.fetchone()
-            denda_aktif = (p_row['nilai'] == '1') if isinstance(p_row, dict) else (p_row[0] == '1') if p_row else True
-            
-            curr_tag_d = tag_d_db
-            sisa_p_before = max(0, tag_p - prev_p)
-            sisa_m_before = max(0, tag_m - prev_m)
-            if sisa_p_before > 0.01 or sisa_m_before > 0.01:
-                if denda_aktif:
-                    curr_tag_d = tag_d_db + ((sisa_p_before + sisa_m_before) * 0.007 * od_h_sisa)
-            
-            sisa_p_baru = tag_p - new_p
-            sisa_m_baru = tag_m - new_m
-            sisa_d_baru = curr_tag_d - new_d
-            status_baru = 'LUNAS' if sisa_p_baru <= 0.01 and sisa_m_baru <= 0.01 and sisa_d_baru <= 0.01 else 'BELUM BAYAR'
-
-            cursor.execute("UPDATE angsuran_dana_urgent SET angsuran_pokok=%s, angsuran_margin=%s, angsuran_denda=%s, tagihan_denda=%s, status=%s, tgl_bayar=%s, edc=%s, sisa_gaji=%s WHERE id=%s", (new_p, new_m, new_d, curr_tag_d, status_baru, tanggal_bayar, edc_urg_str, sisa_gaji, data['id_urgent']))
-            
-            cursor.execute("SELECT jenis_dana_urgent FROM angsuran_dana_urgent WHERE id=%s", (data['id_urgent'],))
-            row_urg = cursor.fetchone()
-            j_urgent = row_urg[0] if isinstance(row_urg, tuple) else row_urg['jenis_dana_urgent'] if row_urg else 'Gaji'
-            akun_piutang = '1203' if j_urgent == 'Gaji' else '1204'
-            akun_pendapatan = '4103' if j_urgent == 'Gaji' else '4104'
-            
-            catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Terima Angsuran Urgent {j_urgent} - {nama_anggota}", (pokok+margin+denda), 0, cabang_member)
-            if edc_urg_val > 0:
-                catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Terima EDC/Admin Urgent {j_urgent} - {nama_anggota}", edc_urg_val, 0, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_bayar, akun_piutang, f"Pelunasan Pokok Urgent {j_urgent} - {nama_anggota}", 0, pokok, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_bayar, akun_pendapatan, f"Pendapatan Margin Urgent {j_urgent} - {nama_anggota}", 0, margin, cabang_member)
-            if denda > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4107', f"Pendapatan Denda Urgent {j_urgent} - {nama_anggota}", 0, denda, cabang_member)
-            if edc_urg_val > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4105', f"Pendapatan EDC/Admin Urgent {j_urgent} - {nama_anggota}", 0, edc_urg_val, cabang_member)
+        for payment in data.get('payments', []):
+            jenis = payment.get('jenis')
+            if jenis in configs:
+                new_sisa_gaji, cetak_info = _proses_satu_pembayaran(cursor, payment, shared_data, configs[jenis])
+                shared_data['sisa_gaji_berjalan'] = new_sisa_gaji
+                if cetak_info:
+                    cetak_info_list.append(cetak_info)
 
         conn.commit()
-        return jsonify({'status': 'success', 'message': 'Pembayaran berhasil diproses dan status telah menjadi bayar angsuran!', 'cetak_info': {'id_utama': data.get('id_utama'), 'id_urgent': data.get('id_urgent')}}), 200
+        return jsonify({'status': 'success', 'message': 'Pembayaran berhasil diproses dan status telah menjadi bayar angsuran!', 'cetak_info': cetak_info_list}), 200
     except ValueError as ve:
         if conn: conn.rollback()
         return jsonify({'status': 'error', 'message': str(ve)}), 400
@@ -635,16 +748,15 @@ def penarikan_simpanan():
     is_approval = data.get('is_approval_execution', False)
     approval_id = data.get('approval_id', None)
     
+    try:
+        data['nominal'] = parse_float(data.get('nominal'), 'Nominal Penarikan')
+    except ValueError as ve:
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+        
     if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("CREATE TABLE IF NOT EXISTS approval_queue (id INT AUTO_INCREMENT PRIMARY KEY, tipe_transaksi VARCHAR(50), data_payload TEXT, diajukan_oleh VARCHAR(50), tanggal_pengajuan DATETIME DEFAULT CURRENT_TIMESTAMP, status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING', cabang VARCHAR(50))")
-            try:
-                cursor.execute("SELECT cabang FROM approval_queue LIMIT 1")
-                cursor.fetchall()
-            except:
-                cursor.execute("ALTER TABLE approval_queue ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
             cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Penarikan Simpanan', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
             conn.commit()
             return jsonify({'status': 'success', 'message': 'Penarikan diajukan! Menunggu Approval dari Manager.'}), 200
@@ -657,7 +769,7 @@ def penarikan_simpanan():
         conn.start_transaction()
         no_anggota = data.get('no_anggota')
         jenis_simpanan = data.get('jenis_simpanan')
-        nominal = parse_float(data.get('nominal'), 'Nominal Penarikan')
+        nominal = data.get('nominal')
         tanggal = datetime.now().strftime('%Y-%m-%d')
         if nominal <= 0: raise ValueError("Nominal penarikan harus lebih dari 0.")
             
@@ -753,7 +865,7 @@ def cek_sisa_tagihan(no_anggota):
     try:
         # 1. Kalkulasi Sisa Pinjaman Multiguna/Tempo
         cursor.execute("""
-            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin
+            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin, COUNT(id) as jml_belum_bayar
             FROM angsuran_multiguna_tempo 
             WHERE no_anggota = %s AND status = 'BELUM BAYAR'
         """, (no_anggota,))
@@ -761,72 +873,274 @@ def cek_sisa_tagihan(no_anggota):
         
         # 2. Kalkulasi Sisa Pinjaman Dana Urgent
         cursor.execute("""
-            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin
+            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin, COUNT(id) as jml_belum_bayar
             FROM angsuran_dana_urgent 
             WHERE no_anggota = %s AND status = 'BELUM BAYAR'
         """, (no_anggota,))
         urgent = cursor.fetchone()
         
         today = datetime.now().date()
-        denda_multiguna = 0
-        denda_urgent = 0
+        denda_multiguna = 0.0
+        denda_urgent = 0.0
         
         # Cek Mode Migrasi
-        cursor.execute("CREATE TABLE IF NOT EXISTS pengaturan (kunci VARCHAR(50) PRIMARY KEY, nilai VARCHAR(50))")
         cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
         p_row = cursor.fetchone()
         denda_aktif = (p_row['nilai'] == '1') if p_row else True
 
         if denda_aktif:
             # Kalkulasi Denda Keterlambatan Multiguna
-            cursor.execute("SELECT jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda, jenis_pinjaman FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            cursor.execute("SELECT jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda, jenis_pinjaman FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
             for row in cursor.fetchall():
-                jt = row['jatuh_tempo']
-                if isinstance(jt, str): jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date()
-                
-                sisa_p = float(row['tagihan_pokok'] or 0) - float(row['angsuran_pokok'] or 0)
-                sisa_m = float(row['tagihan_margin'] or 0) - float(row['angsuran_margin'] or 0)
-                if sisa_p <= 0.01 and sisa_m <= 0.01:
-                    d_kalk = float(row['tagihan_denda'] or 0) - float(row['angsuran_denda'] or 0)
-                else:
-                    if row.get('jenis_pinjaman') == 'Tempo':
-                        d_kalk = ((sisa_p + sisa_m) * 0.007 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
-                    else:
-                        d_kalk = ((sisa_p + sisa_m) * 0.005 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
-                denda_multiguna += max(0, d_kalk)
+                denda_calc, _ = hitung_denda_keterlambatan(
+                    jatuh_tempo=row.get('jatuh_tempo'),
+                    tgl_bayar=row.get('tgl_bayar'),
+                    tagihan_pokok=row.get('tagihan_pokok'),
+                    tagihan_margin=row.get('tagihan_margin'),
+                    angsuran_pokok=row.get('angsuran_pokok'),
+                    angsuran_margin=row.get('angsuran_margin'),
+                    tagihan_denda_db=row.get('tagihan_denda'),
+                    angsuran_denda=row.get('angsuran_denda'),
+                    denda_aktif=denda_aktif,
+                    jenis_pinjaman=row.get('jenis_pinjaman', 'Multiguna'),
+                    tgl_referensi=today
+                )
+                denda_multiguna += denda_calc
 
             # Kalkulasi Denda Keterlambatan Urgent
-            cursor.execute("SELECT tanggal_jatuh_tempo, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda FROM angsuran_dana_urgent WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            cursor.execute("SELECT tanggal_jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda, angsuran_denda, jenis_dana_urgent FROM angsuran_dana_urgent WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
             for row in cursor.fetchall():
-                jt = row['tanggal_jatuh_tempo']
-                if isinstance(jt, str): jt = datetime.strptime(str(jt)[:10], '%Y-%m-%d').date()
-                
-                sisa_p_urg = float(row['tagihan_pokok'] or 0) - float(row['angsuran_pokok'] or 0)
-                sisa_m_urg = float(row['tagihan_margin'] or 0) - float(row['angsuran_margin'] or 0)
-                if sisa_p_urg <= 0.01 and sisa_m_urg <= 0.01:
-                    d_kalk_urg = float(row['tagihan_denda'] or 0) - float(row['angsuran_denda'] or 0)
-                else:
-                    d_kalk_urg = ((sisa_p_urg + sisa_m_urg) * 0.007 * max((today - jt).days, 0)) - float(row['angsuran_denda'] or 0)
-                denda_urgent += max(0, d_kalk_urg)
+                denda_calc, _ = hitung_denda_keterlambatan(
+                    jatuh_tempo=row.get('tanggal_jatuh_tempo'),
+                    tgl_bayar=row.get('tgl_bayar'),
+                    tagihan_pokok=row.get('tagihan_pokok'),
+                    tagihan_margin=row.get('tagihan_margin'),
+                    angsuran_pokok=row.get('angsuran_pokok'),
+                    angsuran_margin=row.get('angsuran_margin'),
+                    tagihan_denda_db=row.get('tagihan_denda'),
+                    angsuran_denda=row.get('angsuran_denda'),
+                    denda_aktif=denda_aktif,
+                    jenis_pinjaman=row.get('jenis_dana_urgent', 'urgent'),
+                    tgl_referensi=today
+                )
+                denda_urgent += denda_calc
 
-        total_multiguna = float(multiguna['sisa_pokok'] or 0) + float(multiguna['sisa_margin'] or 0) + denda_multiguna
-        total_urgent = float(urgent['sisa_pokok'] or 0) + float(urgent['sisa_margin'] or 0) + denda_urgent
+        jml_belum_bayar_multi = multiguna['jml_belum_bayar'] if multiguna and multiguna['jml_belum_bayar'] else 0
+        jml_belum_bayar_urgent = urgent['jml_belum_bayar'] if urgent and urgent['jml_belum_bayar'] else 0
+        edc_multiguna = jml_belum_bayar_multi * 5000
+        edc_urgent = jml_belum_bayar_urgent * 5000
+
+        total_multiguna = float(multiguna['sisa_pokok'] or 0) + float(multiguna['sisa_margin'] or 0) + denda_multiguna + edc_multiguna
+        total_urgent = float(urgent['sisa_pokok'] or 0) + float(urgent['sisa_margin'] or 0) + denda_urgent + edc_urgent
+
+        cursor.execute("SELECT simpanan_pokok, simpanan_wajib, total_simpanan FROM simpanan WHERE nomor_anggota = %s", (no_anggota,))
+        simpanan = cursor.fetchone()
+        sim_pokok = float(simpanan['simpanan_pokok'] or 0) if simpanan else 0
+        sim_wajib = float(simpanan['simpanan_wajib'] or 0) if simpanan else 0
+        sim_total = float(simpanan['total_simpanan'] or 0) if simpanan else 0
 
         return jsonify({
             'status': 'success',
             'data': {
                 'multiguna': {
                     'sisa_pokok': float(multiguna['sisa_pokok'] or 0), 'sisa_margin': float(multiguna['sisa_margin'] or 0),
-                    'denda': denda_multiguna, 'total_pelunasan': total_multiguna
+                    'denda': denda_multiguna, 'edc': edc_multiguna, 'total_pelunasan': total_multiguna
                 },
                 'urgent': {
                     'sisa_pokok': float(urgent['sisa_pokok'] or 0), 'sisa_margin': float(urgent['sisa_margin'] or 0),
-                    'denda': denda_urgent, 'total_pelunasan': total_urgent
-                }
+                    'denda': denda_urgent, 'edc': edc_urgent, 'total_pelunasan': total_urgent
+                },
+                'simpanan': {
+                    'simpanan_pokok': sim_pokok,
+                    'simpanan_wajib': sim_wajib,
+                    'total_simpanan': sim_total
+                },
+                'total_semua_tagihan': total_multiguna + total_urgent
             }
         }), 200
     except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
     finally: cursor.close(); conn.close()
+
+# === API: PELUNASAN PINJAMAN KESELURUHAN ===
+@api_transaksi_bp.route('/api/pelunasan', methods=['POST'])
+def pelunasan_pinjaman():
+    data = request.json
+    is_approval = data.get('is_approval_execution', False)
+    approval_id = data.get('approval_id', None)
+    
+    try:
+        data['edc_utama'] = parse_float(data.get('edc_utama'), 'Biaya EDC Utama')
+        data['edc_urgent'] = parse_float(data.get('edc_urgent'), 'Biaya EDC Urgent')
+        data['denda_utama'] = parse_float(data.get('denda_utama'), 'Denda Utama')
+        data['denda_urgent'] = parse_float(data.get('denda_urgent'), 'Denda Urgent')
+        data['nominal_bayar_tunai'] = parse_float(data.get('nominal_bayar_tunai'), 'Nominal Bayar Tunai')
+    except ValueError as ve:
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+        
+    if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Pelunasan Pinjaman', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
+            conn.commit()
+            return jsonify({'status': 'success', 'message': 'Pelunasan diajukan! Menunggu Approval dari Manager.'}), 201
+        finally: cursor.close(); conn.close()
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        conn.start_transaction()
+        no_anggota = data.get('no_anggota')
+        metode_pelunasan = data.get('metode_pelunasan', 'tunai') # 'simpanan' atau 'tunai'
+        tanggal_bayar = data.get('tanggal_bayar') or datetime.now().strftime('%Y-%m-%d')
+        
+        edc_utama_val = data.get('edc_utama')
+        edc_urgent_val = data.get('edc_urgent')
+        denda_utama_val = data.get('denda_utama')
+        denda_urgent_val = data.get('denda_urgent')
+        nominal_bayar_tunai = data.get('nominal_bayar_tunai')
+        
+        cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+        member = cursor.fetchone()
+        if not member: raise ValueError("Anggota tidak ditemukan.")
+        nama_anggota = member['nama_anggota']
+        cabang_member = member.get('cabang') or session.get('cabang', 'GAS')
+
+        today = datetime.strptime(tanggal_bayar[:10], '%Y-%m-%d').date()
+        
+        cursor.execute("SELECT nilai FROM pengaturan WHERE kunci = 'denda_aktif'")
+        p_row = cursor.fetchone()
+        denda_aktif = (p_row['nilai'] == '1') if p_row else True
+
+        # 1. PELUNASAN MULTIGUNA / TEMPO
+        cursor.execute("""
+            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin
+            FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+        """, (no_anggota,))
+        sisa_utama = cursor.fetchone()
+        total_pokok_utama = float(sisa_utama['sisa_pokok'] or 0) if sisa_utama else 0
+        total_margin_utama = float(sisa_utama['sisa_margin'] or 0) if sisa_utama else 0
+
+        if total_pokok_utama > 0 or total_margin_utama > 0:
+            cursor.execute("SELECT MIN(id) as first_id FROM angsuran_multiguna_tempo WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            first_id_row = cursor.fetchone()
+            first_id_utama = first_id_row['first_id'] if first_id_row else None
+
+            cursor.execute("""
+                UPDATE angsuran_multiguna_tempo 
+                SET angsuran_pokok = tagihan_pokok, angsuran_margin = tagihan_margin, status = 'LUNAS', tgl_bayar = %s
+                WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+            """, (tanggal_bayar, no_anggota))
+
+            if first_id_utama:
+                cursor.execute("""
+                    UPDATE angsuran_multiguna_tempo
+                    SET tagihan_denda = %s, angsuran_denda = %s, edc = %s
+                    WHERE id = %s
+                """, (denda_utama_val, denda_utama_val, edc_utama_val if edc_utama_val > 0 else None, first_id_utama))
+            
+        total_denda_utama = denda_utama_val
+
+        # 2. PELUNASAN DANA URGENT
+        cursor.execute("""
+            SELECT SUM(tagihan_pokok - angsuran_pokok) as sisa_pokok, SUM(tagihan_margin - angsuran_margin) as sisa_margin
+            FROM angsuran_dana_urgent WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+        """, (no_anggota,))
+        sisa_urgent = cursor.fetchone()
+        total_pokok_urgent = float(sisa_urgent['sisa_pokok'] or 0) if sisa_urgent else 0
+        total_margin_urgent = float(sisa_urgent['sisa_margin'] or 0) if sisa_urgent else 0
+
+        if total_pokok_urgent > 0 or total_margin_urgent > 0:
+            cursor.execute("SELECT MIN(id) as first_id FROM angsuran_dana_urgent WHERE no_anggota = %s AND status = 'BELUM BAYAR'", (no_anggota,))
+            first_id_row = cursor.fetchone()
+            first_id_urgent = first_id_row['first_id'] if first_id_row else None
+
+            cursor.execute("""
+                UPDATE angsuran_dana_urgent 
+                SET angsuran_pokok = tagihan_pokok, angsuran_margin = tagihan_margin, status = 'LUNAS', tgl_bayar = %s
+                WHERE no_anggota = %s AND status = 'BELUM BAYAR'
+            """, (tanggal_bayar, no_anggota))
+
+            if first_id_urgent:
+                cursor.execute("""
+                    UPDATE angsuran_dana_urgent
+                    SET tagihan_denda = %s, angsuran_denda = %s, edc = %s
+                    WHERE id = %s
+                """, (denda_urgent_val, denda_urgent_val, edc_urgent_val if edc_urgent_val > 0 else None, first_id_urgent))
+            
+        total_denda_urgent = denda_urgent_val
+
+        total_kewajiban_utama = total_pokok_utama + total_margin_utama + total_denda_utama + edc_utama_val
+        total_kewajiban_urgent = total_pokok_urgent + total_margin_urgent + total_denda_urgent + edc_urgent_val
+        total_kewajiban_semua = total_kewajiban_utama + total_kewajiban_urgent
+        
+        if total_kewajiban_semua <= 0: raise ValueError("Tidak ada tagihan yang bisa dilunasi.")
+
+        # 3. METODE PELUNASAN (SIMPANAN / TUNAI)
+        if metode_pelunasan == 'simpanan':
+            cursor.execute("SELECT simpanan_pokok, simpanan_wajib FROM simpanan WHERE nomor_anggota = %s FOR UPDATE", (no_anggota, ))
+            simpanan = cursor.fetchone()
+            saldo_pokok = float(simpanan['simpanan_pokok']) if simpanan else 0
+            saldo_wajib = float(simpanan['simpanan_wajib']) if simpanan else 0
+            saldo_total = saldo_pokok + saldo_wajib
+
+            bayar_dari_simpanan = min(saldo_total, total_kewajiban_semua)
+            kekurangan = total_kewajiban_semua - bayar_dari_simpanan
+            
+            if nominal_bayar_tunai < kekurangan - 0.01:
+                raise ValueError(f"Uang tunai kurang! Kekurangan dari simpanan adalah Rp {kekurangan:,.0f}.")
+            
+            bayar_tunai = kekurangan
+
+            if bayar_dari_simpanan > 0:
+                sisa_potongan = bayar_dari_simpanan
+                potong_wajib = min(saldo_wajib, sisa_potongan)
+                sisa_potongan -= potong_wajib
+                potong_pokok = sisa_potongan
+                
+                cursor.execute("UPDATE simpanan SET simpanan_wajib = simpanan_wajib - %s, simpanan_pokok = simpanan_pokok - %s, total_simpanan = total_simpanan - %s WHERE nomor_anggota = %s", (potong_wajib, potong_pokok, bayar_dari_simpanan, no_anggota))
+                if potong_wajib > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '3102', f"Debit Simp Wajib (Pelunasan) - {nama_anggota}", potong_wajib, 0, cabang_member)
+                if potong_pokok > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '3101', f"Debit Simp Pokok (Pelunasan) - {nama_anggota}", potong_pokok, 0, cabang_member)
+            
+            if bayar_tunai > 0:
+                catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Kas Masuk Pelunasan (Tunai Tambahan) - {nama_anggota}", bayar_tunai, 0, cabang_member)
+
+        else:
+            if nominal_bayar_tunai < total_kewajiban_semua - 0.01:
+                raise ValueError(f"Uang tunai kurang! Total tagihan adalah Rp {total_kewajiban_semua:,.0f}.")
+            bayar_tunai = total_kewajiban_semua
+            catat_jurnal_cabang(cursor, tanggal_bayar, '1101', f"Kas Masuk Pelunasan Tunai - {nama_anggota}", bayar_tunai, 0, cabang_member)
+
+        # 4. PENGAKUAN PENDAPATAN JURNAL 
+        if total_kewajiban_utama > 0:
+            j_pinjaman = 'Multiguna' # Asumsi default, bisa diperbaiki jika perlu info jenis pinjaman spesifik
+            akun_piutang = '1201' if j_pinjaman == 'Multiguna' else '1202'
+            akun_pendapatan = '4101' if j_pinjaman == 'Multiguna' else '4102'
+            if total_pokok_utama > 0: catat_jurnal_cabang(cursor, tanggal_bayar, akun_piutang, f"Pelunasan Pokok {j_pinjaman} - {nama_anggota}", 0, total_pokok_utama, cabang_member)
+            if total_margin_utama > 0: catat_jurnal_cabang(cursor, tanggal_bayar, akun_pendapatan, f"Pendapatan Margin {j_pinjaman} - {nama_anggota}", 0, total_margin_utama, cabang_member)
+            if total_denda_utama > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4106', f"Pendapatan Denda {j_pinjaman} - {nama_anggota}", 0, total_denda_utama, cabang_member)
+            if edc_utama_val > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4105', f"Pendapatan EDC/Admin {j_pinjaman} - {nama_anggota}", 0, edc_utama_val, cabang_member)
+
+        if total_kewajiban_urgent > 0:
+            j_urgent = 'Gaji' # Asumsi default
+            akun_piutang = '1203' if j_urgent == 'Gaji' else '1204'
+            akun_pendapatan = '4103' if j_urgent == 'Gaji' else '4104'
+            if total_pokok_urgent > 0: catat_jurnal_cabang(cursor, tanggal_bayar, akun_piutang, f"Pelunasan Pokok Urgent {j_urgent} - {nama_anggota}", 0, total_pokok_urgent, cabang_member)
+            if total_margin_urgent > 0: catat_jurnal_cabang(cursor, tanggal_bayar, akun_pendapatan, f"Pendapatan Margin Urgent {j_urgent} - {nama_anggota}", 0, total_margin_urgent, cabang_member)
+            if total_denda_urgent > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4107', f"Pendapatan Denda Urgent {j_urgent} - {nama_anggota}", 0, total_denda_urgent, cabang_member)
+            if edc_urgent_val > 0: catat_jurnal_cabang(cursor, tanggal_bayar, '4105', f"Pendapatan EDC/Admin Urgent {j_urgent} - {nama_anggota}", 0, edc_urgent_val, cabang_member)
+
+        conn.commit()
+        return jsonify({'status': 'success', 'message': f'Pelunasan Berhasil Diproses menggunakan {metode_pelunasan.upper()}!', 'cetak_info': {'no_anggota': no_anggota, 'tanggal_bayar': tanggal_bayar[:10]}}), 200
+    except ValueError as ve:
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': str(ve)}), 400
+    except Exception as e:
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
 
 # === API: PUSAT DATA APPROVAL MANAGER ===
 @api_transaksi_bp.route('/api/approval_queue', methods=['GET'])
@@ -837,14 +1151,6 @@ def get_approval_queue():
     role = session.get('role')
     filter_cabang = request.args.get('cabang')
     try:
-        # Tabel otomatis dibuat jika belum ada agar tidak error
-        cursor.execute("CREATE TABLE IF NOT EXISTS approval_queue (id INT AUTO_INCREMENT PRIMARY KEY, tipe_transaksi VARCHAR(50), data_payload TEXT, diajukan_oleh VARCHAR(50), tanggal_pengajuan DATETIME DEFAULT CURRENT_TIMESTAMP, status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING', cabang VARCHAR(50))")
-        try:
-            cursor.execute("SELECT cabang FROM approval_queue LIMIT 1")
-            cursor.fetchall()
-        except:
-            cursor.execute("ALTER TABLE approval_queue ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
-        
         query_pending = "SELECT * FROM approval_queue WHERE status = 'PENDING'"
         query_history = "SELECT * FROM approval_queue WHERE status != 'PENDING'"
         params_pending = []
@@ -968,6 +1274,19 @@ def sync_jurnal_import():
 def batal_angsuran():
     data = request.json
     
+    is_approval = data.get('is_approval_execution', False)
+    approval_id = data.get('approval_id', None)
+    
+    if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Batal Angsuran', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
+            conn.commit()
+            return jsonify({'status': 'success', 'message': 'Pembatalan angsuran diajukan! Menunggu Approval dari Manager.'}), 201
+        except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
+        finally: cursor.close(); conn.close()
+        
     jenis = data.get('jenis')
     id_tagihan = data.get('id_tagihan')
     if not jenis:
@@ -986,119 +1305,117 @@ def batal_angsuran():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
+        # Inisialisasi variabel untuk mencegah NameError
+        nama_anggota = 'N/A'
+        pokok = margin = denda = 0.0
+
         conn.start_transaction()
         tanggal_batal = datetime.now().strftime('%Y-%m-%d')
-        cabang_member = session.get('cabang', 'GAS')
 
         if jenis == 'utama':
-            cursor.execute("SELECT * FROM angsuran_multiguna_tempo WHERE id = %s AND (status = 'LUNAS' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)", (id_tagihan,))
+            cursor.execute("SELECT * FROM angsuran_multiguna_tempo WHERE id = %s AND status != 'LUNAS TOP-UP' AND (status = 'LUNAS' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)", (id_tagihan,))
             row = cursor.fetchone()
             if not row: raise ValueError("Data angsuran tidak ditemukan, atau tidak ada pembayaran yang bisa dibatalkan (Lunas Top-Up tidak dapat dibatalkan otomatis).")
             
             no_anggota = row['no_anggota']
-            nama_anggota = row.get('nama_anggota', 'Anggota')
+            
+            # Ambil cabang dari anggota yang bersangkutan untuk pencatatan jurnal yang akurat
+            cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+            identitas_row = cursor.fetchone()
+            cabang_member = (identitas_row['cabang'] if identitas_row and identitas_row.get('cabang') else session.get('cabang', 'GAS'))
+            nama_anggota = (identitas_row['nama_anggota'] if identitas_row else row.get('nama_anggota', 'Anggota'))
+
             pokok = float(row.get('angsuran_pokok') or 0)
             margin = float(row.get('angsuran_margin') or 0)
             denda = float(row.get('angsuran_denda') or 0)
-            tgl_bayar = row.get('tgl_bayar')
-            try: edc_val = float(row.get('edc') or 0)
-            except: edc_val = 0.0
+            tgl_bayar = row.get('tgl_bayar') or tanggal_batal
+            simpanan_batal = float(row.get('simpanan_wajib_bayar') or 0)
+            edc_val = float(row.get('edc') or 0)
             j_pinjaman = row.get('jenis_pinjaman') or 'Multiguna'
             
             cursor.execute("""
                 UPDATE angsuran_multiguna_tempo 
-                SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, tagihan_denda=0, status='BELUM BAYAR', tgl_bayar=NULL, edc='-', sisa_gaji=0 
+                SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, tagihan_denda=0, status='BELUM BAYAR', tgl_bayar=NULL, edc='-', sisa_gaji=0, simpanan_wajib_bayar=0 
                 WHERE id=%s
             """, (id_tagihan,))
             
             akun_piutang = '1201' if j_pinjaman == 'Multiguna' else '1202'
             akun_pendapatan = '4101' if j_pinjaman == 'Multiguna' else '4102'
             
-            total = pokok + margin + denda
-            catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal Angsuran {j_pinjaman} - {nama_anggota}", 0, total, cabang_member)
+            total_kas_batal = pokok + margin + denda
+            catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal Angsuran {j_pinjaman} - {nama_anggota}", 0, total_kas_batal, cabang_member)
             if edc_val > 0:
-                catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal EDC/Admin {j_pinjaman} - {nama_anggota}", 0, edc_val, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_batal, akun_piutang, f"Batal Pelunasan Pokok {j_pinjaman} - {nama_anggota}", pokok, 0, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_batal, akun_pendapatan, f"Batal Pendapatan Margin {j_pinjaman} - {nama_anggota}", margin, 0, cabang_member)
-            if denda > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4106', f"Batal Pendapatan Denda {j_pinjaman} - {nama_anggota}", denda, 0, cabang_member)
-            if edc_val > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4105', f"Batal Pendapatan EDC/Admin {j_pinjaman} - {nama_anggota}", edc_val, 0, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal EDC/Admin {j_pinjaman} - {nama_anggota}", 0, edc_val, cabang_member)
+            catat_jurnal_cabang(cursor, tgl_bayar, akun_piutang, f"Batal Pelunasan Pokok {j_pinjaman} - {nama_anggota}", pokok, 0, cabang_member)
+            catat_jurnal_cabang(cursor, tgl_bayar, akun_pendapatan, f"Batal Pendapatan Margin {j_pinjaman} - {nama_anggota}", margin, 0, cabang_member)
+            if denda > 0: catat_jurnal_cabang(cursor, tgl_bayar, '4106', f"Batal Pendapatan Denda {j_pinjaman} - {nama_anggota}", denda, 0, cabang_member)
+            if edc_val > 0: catat_jurnal_cabang(cursor, tgl_bayar, '4105', f"Batal Pendapatan EDC/Admin {j_pinjaman} - {nama_anggota}", edc_val, 0, cabang_member)
 
             # --- BATAL SIMPANAN WAJIB ---
-            simpanan_batal = 0.0
-            if tgl_bayar:
-                tgl_bayar_str = tgl_bayar.strftime('%Y-%m-%d') if hasattr(tgl_bayar, 'strftime') else str(tgl_bayar)[:10]
-                cursor.execute("SELECT SUM(kredit) as tot FROM jurnal_umum WHERE keterangan = %s AND tanggal = %s", (f"Simpanan Wajib - {nama_anggota}", tgl_bayar_str))
-                res_simp = cursor.fetchone()
-                if res_simp and res_simp.get('tot'):
-                    simpanan_batal = float(res_simp['tot'])
-                    cursor.execute("UPDATE jurnal_umum SET keterangan = CONCAT(keterangan, ' (DIBATALKAN)') WHERE keterangan IN (%s, %s) AND tanggal = %s", 
-                                   (f"Simpanan Wajib - {nama_anggota}", f"Terima Simpanan Wajib - {nama_anggota}", tgl_bayar_str))
-                    
             if simpanan_batal > 0:
                 cursor.execute("UPDATE simpanan SET simpanan_wajib = simpanan_wajib - %s, total_simpanan = total_simpanan - %s WHERE nomor_anggota = %s", (simpanan_batal, simpanan_batal, no_anggota))
-                catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal Kas Simpanan Wajib - {nama_anggota}", 0, simpanan_batal, cabang_member)
-                catat_jurnal_cabang(cursor, tanggal_batal, '3102', f"Batal Simpanan Wajib - {nama_anggota}", simpanan_batal, 0, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal Kas Simpanan Wajib - {nama_anggota}", 0, simpanan_batal, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '3102', f"Batal Simpanan Wajib - {nama_anggota}", simpanan_batal, 0, cabang_member)
 
         elif jenis == 'urgent':
-            cursor.execute("SELECT * FROM angsuran_dana_urgent WHERE id = %s AND (status = 'LUNAS' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)", (id_tagihan,))
+            cursor.execute("SELECT * FROM angsuran_dana_urgent WHERE id = %s AND status != 'LUNAS TOP-UP' AND (status = 'LUNAS' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)", (id_tagihan,))
             row = cursor.fetchone()
             if not row: raise ValueError("Data angsuran urgent tidak ditemukan atau tidak ada pembayaran yang bisa dibatalkan.")
             
             no_anggota = row['no_anggota']
-            nama_anggota = row.get('nama_anggota', 'Anggota')
+
+            # Ambil cabang dari anggota yang bersangkutan untuk pencatatan jurnal yang akurat
+            cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+            identitas_row = cursor.fetchone()
+            cabang_member = (identitas_row['cabang'] if identitas_row and identitas_row.get('cabang') else session.get('cabang', 'GAS'))
+            nama_anggota = (identitas_row['nama_anggota'] if identitas_row else row.get('nama_anggota', 'Anggota'))
+
             pokok = float(row.get('angsuran_pokok') or 0)
             margin = float(row.get('angsuran_margin') or 0)
             denda = float(row.get('angsuran_denda') or 0)
-            tgl_bayar = row.get('tgl_bayar')
-            try: edc_val = float(row.get('edc') or 0)
-            except: edc_val = 0.0
+            tgl_bayar = row.get('tgl_bayar') or tanggal_batal
+            simpanan_batal = float(row.get('simpanan_wajib_bayar') or 0)
+            edc_val = float(row.get('edc') or 0)
             j_urgent = row.get('jenis_dana_urgent') or 'Gaji'
             
             cursor.execute("""
                 UPDATE angsuran_dana_urgent 
-                SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, tagihan_denda=0, status='BELUM BAYAR', tgl_bayar=NULL, edc='-', sisa_gaji=0 
+                SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, tagihan_denda=0, status='BELUM BAYAR', tgl_bayar=NULL, edc='-', sisa_gaji=0, simpanan_wajib_bayar=0 
                 WHERE id=%s
             """, (id_tagihan,))
             
             akun_piutang = '1203' if j_urgent == 'Gaji' else '1204'
             akun_pendapatan = '4103' if j_urgent == 'Gaji' else '4104'
             
-            total = pokok + margin + denda
-            catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal Angsuran Urgent {j_urgent} - {nama_anggota}", 0, total, cabang_member)
+            total_kas_batal = pokok + margin + denda
+            catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal Angsuran Urgent {j_urgent} - {nama_anggota}", 0, total_kas_batal, cabang_member)
             if edc_val > 0:
-                catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal EDC/Admin Urgent {j_urgent} - {nama_anggota}", 0, edc_val, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_batal, akun_piutang, f"Batal Pelunasan Pokok Urgent {j_urgent} - {nama_anggota}", pokok, 0, cabang_member)
-            catat_jurnal_cabang(cursor, tanggal_batal, akun_pendapatan, f"Batal Pendapatan Margin Urgent {j_urgent} - {nama_anggota}", margin, 0, cabang_member)
-            if denda > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4107', f"Batal Pendapatan Denda Urgent {j_urgent} - {nama_anggota}", denda, 0, cabang_member)
-            if edc_val > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4105', f"Batal Pendapatan EDC/Admin Urgent {j_urgent} - {nama_anggota}", edc_val, 0, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal EDC/Admin Urgent {j_urgent} - {nama_anggota}", 0, edc_val, cabang_member)
+            catat_jurnal_cabang(cursor, tgl_bayar, akun_piutang, f"Batal Pelunasan Pokok Urgent {j_urgent} - {nama_anggota}", pokok, 0, cabang_member)
+            catat_jurnal_cabang(cursor, tgl_bayar, akun_pendapatan, f"Batal Pendapatan Margin Urgent {j_urgent} - {nama_anggota}", margin, 0, cabang_member)
+            if denda > 0: catat_jurnal_cabang(cursor, tgl_bayar, '4107', f"Batal Pendapatan Denda Urgent {j_urgent} - {nama_anggota}", denda, 0, cabang_member)
+            if edc_val > 0: catat_jurnal_cabang(cursor, tgl_bayar, '4105', f"Batal Pendapatan EDC/Admin Urgent {j_urgent} - {nama_anggota}", edc_val, 0, cabang_member)
 
             # --- BATAL SIMPANAN WAJIB ---
-            simpanan_batal = 0.0
-            if tgl_bayar:
-                tgl_bayar_str = tgl_bayar.strftime('%Y-%m-%d') if hasattr(tgl_bayar, 'strftime') else str(tgl_bayar)[:10]
-                cursor.execute("SELECT SUM(kredit) as tot FROM jurnal_umum WHERE keterangan = %s AND tanggal = %s", (f"Simpanan Wajib - {nama_anggota}", tgl_bayar_str))
-                res_simp = cursor.fetchone()
-                if res_simp and res_simp.get('tot'):
-                    simpanan_batal = float(res_simp['tot'])
-                    cursor.execute("UPDATE jurnal_umum SET keterangan = CONCAT(keterangan, ' (DIBATALKAN)') WHERE keterangan IN (%s, %s) AND tanggal = %s", 
-                                   (f"Simpanan Wajib - {nama_anggota}", f"Terima Simpanan Wajib - {nama_anggota}", tgl_bayar_str))
-                    
             if simpanan_batal > 0:
                 cursor.execute("UPDATE simpanan SET simpanan_wajib = simpanan_wajib - %s, total_simpanan = total_simpanan - %s WHERE nomor_anggota = %s", (simpanan_batal, simpanan_batal, no_anggota))
-                catat_jurnal_cabang(cursor, tanggal_batal, '1101', f"Batal Kas Simpanan Wajib - {nama_anggota}", 0, simpanan_batal, cabang_member)
-                catat_jurnal_cabang(cursor, tanggal_batal, '3102', f"Batal Simpanan Wajib - {nama_anggota}", simpanan_batal, 0, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '1101', f"Batal Kas Simpanan Wajib - {nama_anggota}", 0, simpanan_batal, cabang_member)
+                catat_jurnal_cabang(cursor, tgl_bayar, '3102', f"Batal Simpanan Wajib - {nama_anggota}", simpanan_batal, 0, cabang_member)
+        else:
+            raise ValueError(f"Jenis pinjaman '{jenis}' tidak valid untuk pembatalan.")
 
         # --- AUDIT LOG ---
         try:
-            cursor.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100), role VARCHAR(50), cabang VARCHAR(50), aksi VARCHAR(255), detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
             detail_log = json.dumps({'id_tagihan': id_tagihan, 'jenis': jenis, 'nama_anggota': nama_anggota, 'pokok': pokok, 'margin': margin, 'alasan': alasan_batal})
             user_aktif = session.get('nama_lengkap', session.get('username', 'System'))
             role_aktif = session.get('role', 'System')
             cursor.execute("INSERT INTO audit_logs (username, role, cabang, aksi, detail) VALUES (%s, %s, %s, %s, %s)", 
                            (user_aktif, role_aktif, cabang_member, 'BATAL_ANGSURAN', detail_log))
-            cursor.execute("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
         except Exception:
             pass
+
+        if is_approval and approval_id:
+            cursor.execute("UPDATE approval_queue SET status = 'APPROVED' WHERE id = %s", (approval_id,))
 
         conn.commit()
         return jsonify({'status': 'success', 'message': 'Pembayaran angsuran berhasil dibatalkan dan jurnal dikoreksi.'}), 200
@@ -1116,6 +1433,19 @@ def batal_angsuran():
 def batal_pencairan():
     data = request.json
     
+    is_approval = data.get('is_approval_execution', False)
+    approval_id = data.get('approval_id', None)
+    
+    if session.get('role') not in ['Manager', 'Super Admin'] and not is_approval:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO approval_queue (tipe_transaksi, data_payload, diajukan_oleh, cabang) VALUES (%s, %s, %s, %s)", ('Batal Pencairan', json.dumps(data), session.get('nama_lengkap', session.get('nama', 'Admin')), session.get('cabang') or 'GAS'))
+            conn.commit()
+            return jsonify({'status': 'success', 'message': 'Pembatalan pencairan diajukan! Menunggu Approval dari Manager.'}), 201
+        except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 500
+        finally: cursor.close(); conn.close()
+        
     jenis = data.get('jenis')
     no_anggota = data.get('no_anggota')
     if not jenis:
@@ -1164,20 +1494,29 @@ def batal_pencairan():
             raise ValueError(f"Jenis pencairan tidak dikenali. Payload: {json.dumps(data)}")
 
         tanggal_batal = datetime.now().strftime('%Y-%m-%d')
-        cabang_member = session.get('cabang', 'GAS')
 
         if not tgl_pencairan:
             raise ValueError("Tanggal pencairan tidak valid atau tidak disertakan dari sistem.")
 
         if jenis == 'utama':
-            cursor.execute("SELECT id FROM angsuran_multiguna_tempo WHERE no_anggota=%s AND DATE(tgl_pencairan)=%s AND status != 'BELUM BAYAR'", (no_anggota, tgl_pencairan))
+            cursor.execute("""
+                SELECT id FROM angsuran_multiguna_tempo 
+                WHERE no_anggota=%s AND DATE(tgl_pencairan)=%s 
+                AND status != 'LUNAS TOP-UP' 
+                AND (status != 'BELUM BAYAR' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)
+            """, (no_anggota, tgl_pencairan))
             if cursor.fetchone(): raise ValueError("Tidak bisa membatalkan pencairan karena sudah ada angsuran yang dibayar. Batalkan angsurannya terlebih dahulu.")
             
             cursor.execute("SELECT * FROM pencairan_multiguna_tempo WHERE no_anggota=%s AND DATE(tanggal_cair)=%s", (no_anggota, tgl_pencairan))
             pencairan = cursor.fetchone()
             if not pencairan: raise ValueError("Data pencairan tidak ditemukan.")
             
-            nama_anggota = pencairan.get('nama_anggota', 'Anggota')
+            # Ambil cabang dari anggota yang bersangkutan untuk pencatatan jurnal yang akurat
+            cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+            identitas_row = cursor.fetchone()
+            cabang_member = (identitas_row['cabang'] if identitas_row and identitas_row.get('cabang') else session.get('cabang', 'GAS'))
+            nama_anggota = (identitas_row['nama_anggota'] if identitas_row else pencairan.get('nama_anggota', 'Anggota'))
+
             j_pinjaman = pencairan.get('jenis_pencairan', 'Multiguna')
             besar_pinjaman = float(pencairan.get('besar_pinjaman') or 0)
             terima_bersih = float(pencairan.get('terima_bersih') or 0)
@@ -1204,22 +1543,64 @@ def batal_pencairan():
             if potongan_ppap > 0: catat_jurnal_cabang(cursor, tanggal_batal, '2103', f"Batal Jaminan PPAP - {nama_anggota}", potongan_ppap, 0, cabang_member)
             
             # Memulihkan tagihan lama yang sempat dilunasi dengan skema Top-Up
-            if potongan_angsuran > 0: 
-                catat_jurnal_cabang(cursor, tanggal_batal, akun_piutang, f"Batal Potongan Top-Up - {nama_anggota}", potongan_angsuran, 0, cabang_member)
+            if potongan_angsuran > 0:
+                # AMBIL KEMBALI NILAI YANG DILUNASI SECARA AKURAT
+                cursor.execute("""
+                    SELECT SUM(tagihan_pokok) as pokok, SUM(tagihan_margin) as margin, SUM(tagihan_denda) as denda
+                    FROM angsuran_multiguna_tempo
+                    WHERE no_anggota=%s AND DATE(tgl_bayar)=%s AND status='LUNAS TOP-UP'
+                """, (no_anggota, tgl_pencairan))
+                reversal_topup = cursor.fetchone()
+                
+                pokok_batal_topup = float(reversal_topup.get('pokok') or 0)
+                margin_batal_topup = float(reversal_topup.get('margin') or 0)
+                denda_batal_topup = float(reversal_topup.get('denda') or 0)
+
+                # JURNAL PEMBALIK YANG AKURAT
+                akun_pendapatan_lama = '4101' # Asumsi default
+                if pokok_batal_topup > 0: catat_jurnal_cabang(cursor, tanggal_batal, akun_piutang, f"Batal Pelunasan Pokok (Top-Up) - {nama_anggota}", pokok_batal_topup, 0, cabang_member)
+                if margin_batal_topup > 0: catat_jurnal_cabang(cursor, tanggal_batal, akun_pendapatan_lama, f"Batal Pendapatan Margin (Top-Up) - {nama_anggota}", margin_batal_topup, 0, cabang_member)
+                if denda_batal_topup > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4106', f"Batal Pendapatan Denda (Top-Up) - {nama_anggota}", denda_batal_topup, 0, cabang_member)
+
                 cursor.execute("UPDATE angsuran_multiguna_tempo SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, status='BELUM BAYAR', tgl_bayar=NULL WHERE no_anggota=%s AND DATE(tgl_bayar)=%s AND status='LUNAS TOP-UP'", (no_anggota, tgl_pencairan))
-            if potongan_urgent > 0: 
-                catat_jurnal_cabang(cursor, tanggal_batal, '1203', f"Batal Potongan Urgent - {nama_anggota}", potongan_urgent, 0, cabang_member)
+            if potongan_urgent > 0:
+                cursor.execute("""
+                    SELECT SUM(tagihan_pokok) as pokok, SUM(tagihan_margin) as margin, SUM(tagihan_denda) as denda, jenis_dana_urgent
+                    FROM angsuran_dana_urgent
+                    WHERE no_anggota=%s AND DATE(tgl_bayar)=%s AND status='LUNAS TOP-UP'
+                    GROUP BY jenis_dana_urgent
+                """, (no_anggota, tgl_pencairan))
+                for reversal_urgent in cursor.fetchall():
+                    pokok_batal_urgent = float(reversal_urgent.get('pokok') or 0)
+                    margin_batal_urgent = float(reversal_urgent.get('margin') or 0)
+                    denda_batal_urgent = float(reversal_urgent.get('denda') or 0)
+                    j_urgent_lama = reversal_urgent.get('jenis_dana_urgent') or 'Gaji'
+                    akun_piutang_urgent = '1203' if j_urgent_lama == 'Gaji' else '1204'
+                    akun_pendapatan_urgent = '4103' if j_urgent_lama == 'Gaji' else '4104'
+                    if pokok_batal_urgent > 0: catat_jurnal_cabang(cursor, tanggal_batal, akun_piutang_urgent, f"Batal Pelunasan Pokok Urgent (Top-Up) - {nama_anggota}", pokok_batal_urgent, 0, cabang_member)
+                    if margin_batal_urgent > 0: catat_jurnal_cabang(cursor, tanggal_batal, akun_pendapatan_urgent, f"Batal Pendapatan Margin Urgent (Top-Up) - {nama_anggota}", margin_batal_urgent, 0, cabang_member)
+                    if denda_batal_urgent > 0: catat_jurnal_cabang(cursor, tanggal_batal, '4107', f"Batal Pendapatan Denda Urgent (Top-Up) - {nama_anggota}", denda_batal_urgent, 0, cabang_member)
                 cursor.execute("UPDATE angsuran_dana_urgent SET angsuran_pokok=0, angsuran_margin=0, angsuran_denda=0, status='BELUM BAYAR', tgl_bayar=NULL WHERE no_anggota=%s AND DATE(tgl_bayar)=%s AND status='LUNAS TOP-UP'", (no_anggota, tgl_pencairan))
 
         elif jenis == 'urgent':
-            cursor.execute("SELECT id FROM angsuran_dana_urgent WHERE no_anggota=%s AND DATE(tgl_pencairan)=%s AND status != 'BELUM BAYAR'", (no_anggota, tgl_pencairan))
+            cursor.execute("""
+                SELECT id FROM angsuran_dana_urgent 
+                WHERE no_anggota=%s AND DATE(tgl_pencairan)=%s 
+                AND status != 'LUNAS TOP-UP' 
+                AND (status != 'BELUM BAYAR' OR angsuran_pokok > 0 OR angsuran_margin > 0 OR angsuran_denda > 0)
+            """, (no_anggota, tgl_pencairan))
             if cursor.fetchone(): raise ValueError("Tidak bisa membatalkan pencairan karena sudah ada pembayaran yang lunas. Batalkan angsuran terlebih dahulu.")
             
             cursor.execute("SELECT * FROM pencairan_dana_urgent WHERE no_anggota=%s AND DATE(tanggal_pencairan_dana_urgent)=%s", (no_anggota, tgl_pencairan))
             pencairan = cursor.fetchone()
             if not pencairan: raise ValueError("Data pencairan urgent tidak ditemukan.")
             
-            nama_anggota = pencairan.get('nama_anggota', 'Anggota')
+            # Ambil cabang dari anggota yang bersangkutan untuk pencatatan jurnal yang akurat
+            cursor.execute("SELECT nama_anggota, cabang FROM identitas WHERE no_anggota = %s", (no_anggota,))
+            identitas_row = cursor.fetchone()
+            cabang_member = (identitas_row['cabang'] if identitas_row and identitas_row.get('cabang') else session.get('cabang', 'GAS'))
+            nama_anggota = (identitas_row['nama_anggota'] if identitas_row else pencairan.get('nama_anggota', 'Anggota'))
+
             j_urgent = pencairan.get('jenis_dana_urgent') or 'Gaji'
             jumlah_dana = float(pencairan.get('jumlah_dana_urgent') or 0)
             
@@ -1235,15 +1616,16 @@ def batal_pencairan():
 
         # --- AUDIT LOG ---
         try:
-            cursor.execute("CREATE TABLE IF NOT EXISTS audit_logs (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(100), role VARCHAR(50), cabang VARCHAR(50), aksi VARCHAR(255), detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
             detail_log = json.dumps({'no_anggota': no_anggota, 'jenis': jenis, 'nama_anggota': nama_anggota, 'tanggal_cair': tgl_pencairan, 'alasan': alasan_batal})
             user_aktif = session.get('nama_lengkap', session.get('username', 'System'))
             role_aktif = session.get('role', 'System')
             cursor.execute("INSERT INTO audit_logs (username, role, cabang, aksi, detail) VALUES (%s, %s, %s, %s, %s)", 
                            (user_aktif, role_aktif, cabang_member, 'BATAL_PENCAIRAN', detail_log))
-            cursor.execute("DELETE FROM audit_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 3 MONTH)")
         except Exception:
             pass
+
+        if is_approval and approval_id:
+            cursor.execute("UPDATE approval_queue SET status = 'APPROVED' WHERE id = %s", (approval_id,))
 
         conn.commit()
         return jsonify({'status': 'success', 'message': 'Pencairan berhasil dibatalkan dan seluruh tagihan telah dihapus.'}), 200
@@ -1265,9 +1647,9 @@ def download_template_migrasi(jenis):
     writer = csv.writer(output, delimiter=',')
     
     if jenis == 'identitas':
-        writer.writerow(['no_referensi_excel', 'nama_anggota', 'cabang', 'tgl_lahir', 'no_telp', 'nik_ktp', 'nik_kk', 'alamat_ktp', 'alamat_tagih', 'status_tempat_tinggal', 'email', 'password', 'pt_instansi', 'status_karyawan', 'jabatan', 'awal_bekerja', 'lama_kerja', 'akhir_bekerja', 'no_jmo', 'status_jmo', 'bank', 'no_rek', 'nama_penanggung_jawab', 'no_telp_penanggung_jawab', 'bank_penanggung_jawab', 'no_rek_penanggung_jawab', 'kol', 'kriteria', 'marketing', 'simpanan_pokok', 'simpanan_wajib'])
-        writer.writerow(['1', 'SAIPU NAWASI (LANCAR)', 'GAS', '1990-01-01', '08123456789', '367100000000', '367100000000', 'Jl. Mawar No 1', 'Jl. Mawar No 1', 'Milik Sendiri', 'email@test.com', '123456', 'PT ABC', 'Tetap', 'Staff', '2020-01-01', '6 Tahun', '', '112233', 'Aktif', 'BCA', '123456789', 'Istri', '081222', 'BRI', '987654', 'Lancar', 'VIP', 'Sales A', '100000', '250000'])
-        writer.writerow(['2', 'BUDI SANTOSO (MACET)', 'GAS', '1985-05-15', '08133333', '367100000001', '367100000001', 'Jl. Melati No 2', 'Jl. Melati No 2', 'Sewa', 'budi@test.com', '123456', 'PT XYZ', 'Tetap', 'Staff', '2015-01-01', '11 Tahun', '', '112244', 'Aktif', 'Mandiri', '987654321', 'Istri', '08133333', 'BCA', '112233', 'Macet', 'Reguler', 'Sales B', '50000', '150000'])
+        writer.writerow(['no_referensi_excel', 'nama_anggota', 'cabang', 'tgl_lahir', 'no_telp', 'nik_ktp', 'nik_kk', 'alamat_ktp', 'alamat_tagih', 'status_tempat_tinggal', 'email', 'password', 'pt_instansi', 'status_karyawan', 'jabatan', 'awal_bekerja', 'lama_kerja', 'akhir_bekerja', 'no_jmo', 'status_jmo', 'bank', 'no_rek', 'nama_penanggung_jawab', 'no_telp_penanggung_jawab', 'bank_penanggung_jawab', 'no_rek_penanggung_jawab', 'kol', 'kriteria', 'marketing', 'status_pernikahan', 'alamat_penanggung_jawab', 'simpanan_pokok', 'simpanan_wajib'])
+        writer.writerow(['1', 'SAIPU NAWASI (LANCAR)', 'GAS', '1990-01-01', '08123456789', '367100000000', '367100000000', 'Jl. Mawar No 1', 'Jl. Mawar No 1', 'Milik Sendiri', 'email@test.com', '123456', 'PT ABC', 'Tetap', 'Staff', '2020-01-01', '6 Tahun', '', '112233', 'Aktif', 'BCA', '123456789', 'Istri', '081222', 'BRI', '987654', 'Lancar', 'VIP', 'Sales A', 'Menikah', 'Jl. Mawar No 2', '100000', '250000'])
+        writer.writerow(['2', 'BUDI SANTOSO (MACET)', 'GAS', '1985-05-15', '08133333', '367100000001', '367100000001', 'Jl. Melati No 2', 'Jl. Melati No 2', 'Sewa', 'budi@test.com', '123456', 'PT XYZ', 'Tetap', 'Staff', '2015-01-01', '11 Tahun', '', '112244', 'Aktif', 'Mandiri', '987654321', 'Istri', '08133333', 'BCA', '112233', 'Macet', 'Reguler', 'Sales B', 'Belum Menikah', 'Jl. Melati No 3', '50000', '150000'])
         filename = 'Template_1_Identitas_Simpanan.csv'
         
     elif jenis == 'multiguna':

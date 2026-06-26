@@ -15,7 +15,11 @@ def close_db_connection(e=None):
         db.close()
 
 def init_db(app):
-    """Menjalankan migrasi skema tabel satu kali saat aplikasi dinyalakan."""
+    """
+    Menjalankan migrasi skema tabel sederhana satu kali saat aplikasi dinyalakan.
+    CATATAN: Untuk pengembangan jangka panjang, sangat disarankan menggunakan alat migrasi
+    seperti Flask-Migrate (Alembic) untuk manajemen skema yang lebih andal.
+    """
     with app.app_context():
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -37,18 +41,34 @@ def init_db(app):
             except: pass
             try: cursor.execute("ALTER TABLE approval_queue ADD COLUMN cabang VARCHAR(50) DEFAULT 'GAS'")
             except: pass
+            try: cursor.execute("ALTER TABLE identitas ADD COLUMN berkas_jaminan TEXT")
+            except: pass
+            try: cursor.execute("ALTER TABLE identitas ADD COLUMN status_pernikahan VARCHAR(50)")
+            except: pass
+            try: cursor.execute("ALTER TABLE identitas ADD COLUMN alamat_penanggung_jawab TEXT")
+            except: pass
+            try: cursor.execute("ALTER TABLE identitas ADD COLUMN link_gmaps TEXT")
+            except: pass
             
             # Kolom EDC & Sisa Gaji pada Tagihan
             try:
                 cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'edc'")
                 if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN edc VARCHAR(50) DEFAULT '-'")
                 cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'sisa_gaji'")
-                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0.00")
+                cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'gaji_awal'")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN gaji_awal DECIMAL(15,2) DEFAULT 0.00")
+                cursor.execute("SHOW COLUMNS FROM angsuran_multiguna_tempo LIKE 'simpanan_wajib_bayar'")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_multiguna_tempo ADD COLUMN simpanan_wajib_bayar DECIMAL(15,2) DEFAULT 0.00")
                 
                 cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'edc'")
                 if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN edc VARCHAR(50) DEFAULT '-'")
                 cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'sisa_gaji'")
-                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN sisa_gaji DECIMAL(15,2) DEFAULT 0.00")
+                cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'gaji_awal'")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN gaji_awal DECIMAL(15,2) DEFAULT 0.00")
+                cursor.execute("SHOW COLUMNS FROM angsuran_dana_urgent LIKE 'simpanan_wajib_bayar'")
+                if not cursor.fetchall(): cursor.execute("ALTER TABLE angsuran_dana_urgent ADD COLUMN simpanan_wajib_bayar DECIMAL(15,2) DEFAULT 0.00")
             except: pass
             
             conn.commit()

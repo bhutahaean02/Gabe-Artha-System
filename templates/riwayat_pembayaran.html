@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block title %}Riwayat Pembayaran Angsuran{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4"><i class="fa-solid fa-clock-rotate-left me-2"></i>Riwayat Pembayaran Angsuran</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item"><a href="{{ url_for('pages.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Riwayat Pembayaran</li>
+    </ol>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <i class="fa-solid fa-filter me-1"></i>
+            Filter Riwayat
+        </div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="filterStartDate" class="form-label">Dari Tanggal</label>
+                    <input type="date" id="filterStartDate" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="filterEndDate" class="form-label">Sampai Tanggal</label>
+                    <input type="date" id="filterEndDate" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label for="filterNama" class="form-label">Nama / No. Anggota</label>
+                    <input type="text" id="filterNama" class="form-control" placeholder="Ketik untuk mencari...">
+                </div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button id="btnFilter" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass me-2"></i>Terapkan Filter</button>
+                        <button id="btnExport" class="btn btn-success"><i class="fa-solid fa-file-excel me-2"></i>Export ke Excel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <i class="fas fa-table me-1"></i>
+            Hasil Riwayat Pembayaran
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tabelRiwayat" class="table table-striped table-hover" style="width:100%">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Tgl Bayar</th>
+                            <th>No. Anggota</th>
+                            <th>Nama Anggota</th>
+                            <th>Jenis Pinjaman</th>
+                            <th>Ke</th>
+                            <th class="text-end">Pokok</th>
+                            <th class="text-end">Margin</th>
+                            <th class="text-end">Denda</th>
+                            <th class="text-end">EDC</th>
+                            <th class="text-end">Simp. Wajib</th>
+                            <th class="text-end">Total Bayar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelBody">
+                        <!-- Data akan diisi oleh JavaScript -->
+                    </tbody>
+                    <tfoot class="table-group-divider fw-bold">
+                        <tr>
+                            <td colspan="5" class="text-end">TOTAL</td>
+                            <td id="totalPokok" class="text-end"></td>
+                            <td id="totalMargin" class="text-end"></td>
+                            <td id="totalDenda" class="text-end"></td>
+                            <td id="totalEdc" class="text-end"></td>
+                            <td id="totalSimpanan" class="text-end"></td>
+                            <td id="grandTotal" class="text-end"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div id="loadingIndicator" class="text-center mt-3" style="display: none;">
+                <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                <p>Memuat data...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/riwayat_pembayaran.js') }}"></script>
+{% endblock %}

@@ -8,234 +8,193 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
-<div class="card shadow border-0">
-    <div class="card-header bg-white pt-3 pb-2">
-        <h5 class="mb-0 text-success"><i class="fa-solid fa-cash-register me-2"></i> Form Kasir Pembayaran</h5>
-    </div>
-    
-    <div class="card-body">
-        <div id="alertBox"></div>
+<style>
+    /* Gaya khusus agar sidebar ringkasan tetap terlihat saat scroll */
+    .sidebar-sticky {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 1rem; /* Jarak dari atas */
+        z-index: 1000;
+    }
+</style>
 
-        <div class="row mb-4 bg-light p-3 rounded border align-items-center">
-            <div class="col-md-4">
-                <label class="form-label fw-bold">1. Pilih Anggota *</label>
-                <select id="selectAnggota" class="form-select border-success shadow-sm">
-                    <option value="" selected disabled>-- Memuat Data Anggota --</option>
-                </select>
+<div id="alertBox"></div>
+
+<div class="row">
+    <!-- Kolom Utama: Pilihan Anggota & Kartu Tagihan -->
+    <div class="col-lg-8">
+        
+        <!-- Card untuk Memilih Anggota -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-light p-3">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-user-check me-2 text-primary"></i>1. Pilih Anggota & Tanggal Bayar</h5>
             </div>
-            <div class="col-md-3 mt-3 mt-md-0">
-                <label class="form-label fw-bold text-primary">Filter Tagihan</label>
-                <select id="filterTagihan" class="form-select border-primary shadow-sm">
-                    <option value="Semua">Semua Tagihan</option>
-                    <option value="Multiguna">Multiguna</option>
-                    <option value="Tempo">Tempo</option>
-                    <option value="Gaji">Dana Urgent Gaji</option>
-                    <option value="THR">Dana Urgent THR</option>
-                </select>
-            </div>
-            <div class="col-md-3 mt-3 mt-md-0">
-                <label class="form-label fw-bold text-primary">Tanggal Pembayaran</label>
-                <input type="date" id="inputTanggalBayar" class="form-control border-primary fw-bold text-primary" required>
-            </div>
-            <div class="col-md-2 pt-3 pt-md-0 text-md-end text-muted small">
-                Tagihan terdekat.
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-8">
+                        <label for="selectAnggota" class="form-label">Anggota</label>
+                        <select id="selectAnggota" class="form-select"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="inputTanggalBayar" class="form-label">Tanggal Bayar</label>
+                        <input type="date" id="inputTanggalBayar" class="form-control">
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- Container untuk Kartu Pinjaman Dinamis -->
+        <div id="kartu-pembayaran-container">
+            <div class="text-center text-muted p-5 bg-light rounded border">
+                <i class="fa-solid fa-arrow-up-wide-short fa-3x mb-3"></i>
+                <h4 class="fw-light">Silakan pilih anggota untuk menampilkan tagihan.</h4>
+            </div>
+        </div>
+
+        <!-- Area Cetak Struk (muncul setelah transaksi berhasil) -->
+        <div id="areaCetak" class="mt-4" style="display: none;">
+            <div class="card border-success shadow-sm">
+                <div class="card-header bg-success bg-opacity-10 text-success border-success">
+                    <h5 class="mb-0"><i class="fa-solid fa-print me-2"></i><strong>Transaksi Berhasil! Cetak Struk</strong></h5>
+                </div>
+                <div class="card-body" id="tombolCetak">
+                    <!-- Tombol cetak dinamis akan muncul di sini -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Kanan: Ringkasan & Aksi -->
+    <div class="col-lg-4">
         <form id="formPembayaran" style="display: none;">
-            <div class="row g-4">
-                <div class="col-lg-7" id="areaUtama">
-                    <div class="card border-primary h-100 shadow-sm">
-                        <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fa-solid fa-file-invoice-dollar me-2"></i> Tagihan Utama</h6>
-                            <span id="badgeBungaUtama" class="badge bg-warning text-dark fs-6">Bunga: -</span>
-                        </div>
-                        <div class="card-body">
-                            <input type="hidden" id="id_utama" name="id_utama">
-                            
-                            <div class="row g-3 mb-3 border-bottom pb-3">
-                                <div class="col-6">
-                                    <label class="small text-muted">Jenis Pinjaman</label>
-                                    <div class="fw-bold fs-5" id="txtJenisUtama">-</div>
-                                </div>
-                                <div class="col-6">
-                                    <label class="small text-muted">Angsuran Ke-</label>
-                                    <input type="text" id="txtAngsuranKe" class="form-control form-control-sm fw-bold text-primary fs-5" value="-">
-                                </div>
-                                <div class="col-6">
-                                    <label class="small text-muted">Jatuh Tempo</label>
-                                    <div class="fw-bold text-danger" id="txtJatuhTempoUtama">-</div>
-                                </div>
-                            </div>
-
-                            <div class="row g-3 bg-light p-2 rounded mb-3">
-                                <div class="col-6">
-                                    <label class="small fw-bold text-secondary">Sisa Pokok Keseluruhan</label>
-                                    <div class="fs-5 text-secondary" id="txtSisaPokok">Rp 0</div>
-                                </div>
-                                <div class="col-6">
-                                    <label class="small fw-bold text-secondary">Sisa Margin Keseluruhan</label>
-                                    <div class="fs-5 text-secondary" id="txtSisaMargin">Rp 0</div>
-                                </div>
-                            </div>
-
-                            <!-- 1. Bagian Informasi Tagihan Sistem -->
-                            <h6 class="text-primary mt-4 border-bottom pb-2 fw-bold"><i class="fa-solid fa-file-invoice me-2"></i>Rincian Tagihan Sistem</h6>
-                            <div class="row g-3 bg-light p-3 rounded mb-3 border mx-0">
-                                <div class="col-md-3 col-6">
-                                    <label class="small text-muted fw-bold">Tagihan Pokok</label>
-                                    <div class="fs-5 fw-bold text-dark" id="dispTagihanPokokUtama">Rp 0</div>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="small text-muted fw-bold">Tagihan Margin</label>
-                                    <div class="fs-5 fw-bold text-dark" id="dispTagihanMarginUtama">Rp 0</div>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="small text-muted fw-bold text-danger">Denda Telat <small id="txtInfoDendaUtama" class="fw-bold"></small></label>
-                                    <div class="fs-5 fw-bold text-danger" id="dispTagihanDendaUtama">Rp 0</div>
-                                </div>
-                                <div class="col-md-3 col-6">
-                                    <label class="small text-muted fw-bold text-warning" title="Total Tagihan Dana Urgent">Tagihan Urgent</label>
-                                    <div class="fs-5 fw-bold text-warning" id="dispTotalUrgentSystem">Rp 0</div>
-                                </div>
-                            </div>
-
-                            <!-- 2. Bagian Input Kasir -->
-                            <div class="d-flex justify-content-between align-items-center mt-4 border-bottom pb-2 mb-3">
-                                <h6 class="text-success fw-bold mb-0"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="checkMinusUtama" style="cursor:pointer;">
-                                    <label class="form-check-label fw-bold text-danger small" for="checkMinusUtama">Pembayaran Minus (Sebagian)</label>
-                                </div>
-                            </div>
-                            <div class="row g-3 mb-3">
-                                <div class="col-4">
-                                    <label class="small fw-bold">Bayar Pokok (Rp)</label>
-                                    <input type="text" id="inputPokokUtama" name="nominal_pokok_utama" class="form-control fw-bold text-primary input-kalkulasi format-rp">
-                                </div>
-                                <div class="col-4">
-                                    <label class="small fw-bold">Bayar Margin (Rp)</label>
-                                    <input type="text" id="inputMarginUtama" name="nominal_margin_utama" class="form-control fw-bold text-primary input-kalkulasi format-rp">
-                                </div>
-                                <div class="col-4">
-                                    <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
-                                    <input type="text" id="inputDendaUtama" name="nominal_denda_utama" class="form-control fw-bold text-danger input-kalkulasi format-rp" value="0">
-                                </div>
-                            </div>
-                            
-                            <!-- TAMBAHAN: Input Simpanan Wajib -->
-                            <div class="mt-3 p-3 border rounded border-success bg-success bg-opacity-10">
-                                <label class="small fw-bold text-success mb-2"><i class="fa-solid fa-piggy-bank me-1"></i> Titipan Simpanan Wajib</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-success text-white border-success fw-bold">Rp</span>
-                                    <input type="text" id="inputSimpananWajib" name="nominal_simpanan_wajib" class="form-control border-success fw-bold text-success fs-5 input-kalkulasi format-rp" value="0">
-                                </div>
-                                <small class="text-muted mt-1 d-block" style="font-size: 11px;">Isi nominal jika anggota menitipkan simpanan wajib bulan ini.</small>
-                            </div>
+            <div class="card shadow-sm sidebar-sticky">
+                <div class="card-header bg-dark text-white p-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-receipt me-2"></i>2. Ringkasan & Aksi</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label for="gaji_awal_keseluruhan" class="form-label">Gaji Awal (Opsional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="text" id="gaji_awal_keseluruhan" class="form-control format-rp">
                         </div>
                     </div>
-                </div>
-
-                <!-- TAMBAHAN: Area Dana Urgent yang sebelumnya hilang -->
-                <div class="col-lg-5" id="areaUrgent" style="display: none;">
-                    <div class="card border-warning h-100 shadow-sm">
-                        <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 fw-bold"><i class="fa-solid fa-bolt me-2"></i> Dana Urgent</h6>
-                            <div class="form-check form-switch m-0">
-                                <input class="form-check-input" type="checkbox" id="checkBayarUrgent" style="cursor:pointer;" title="Centang untuk bayar angsuran dana urgent juga">
-                            </div>
-                        </div>
-                        <div class="card-body" id="formInputUrgent" style="opacity: 0.5; pointer-events: none;">
-                            <input type="hidden" id="id_urgent" name="id_urgent">
-                            <div class="row g-3 mb-3 border-bottom pb-3">
-                                <div class="col-12">
-                                    <label class="small text-muted">Tanggal Pencairan / Jatuh Tempo</label>
-                                    <div class="fw-bold fs-5 text-danger" id="txtJatuhTempoUrgent">-</div>
-                                </div>
-                            </div>
-                            
-                            <!-- 1. Bagian Informasi Tagihan Sistem (Urgent) -->
-                            <h6 class="text-warning mt-3 border-bottom pb-2 fw-bold"><i class="fa-solid fa-file-invoice me-2"></i>Rincian Tagihan Urgent</h6>
-                            <div class="row g-3 bg-light p-3 rounded mb-3 border mx-0">
-                                <div class="col-4">
-                                    <label class="small text-muted fw-bold">Tagihan Pokok</label>
-                                    <div class="fs-5 fw-bold text-dark" id="dispTagihanPokokUrgent">Rp 0</div>
-                                </div>
-                                <div class="col-4">
-                                    <label class="small text-muted fw-bold">Tagihan Margin</label>
-                                    <div class="fs-5 fw-bold text-dark" id="dispTagihanMarginUrgent">Rp 0</div>
-                                </div>
-                                <div class="col-4">
-                                    <label class="small text-muted fw-bold text-danger">Denda Telat</label>
-                                    <div class="fs-5 fw-bold text-danger" id="dispTagihanDendaUrgent">Rp 0</div>
-                                </div>
-                            </div>
-
-                            <!-- 2. Bagian Input Kasir (Urgent) -->
-                            <div class="d-flex justify-content-between align-items-center mt-4 border-bottom pb-2 mb-3">
-                                <h6 class="text-success fw-bold mb-0"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="checkMinusUrgent" style="cursor:pointer;">
-                                    <label class="form-check-label fw-bold text-danger small" for="checkMinusUrgent">Pembayaran Minus (Sebagian)</label>
-                                </div>
-                            </div>
-                            <div class="row g-3 mb-3">
-                                <div class="col-4">
-                                    <label class="small fw-bold">Bayar Pokok (Rp)</label>
-                                    <input type="text" id="inputPokokUrgent" name="nominal_pokok_urgent" class="form-control fw-bold text-primary input-kalkulasi format-rp">
-                                </div>
-                                <div class="col-4">
-                                    <label class="small fw-bold">Bayar Margin (Rp)</label>
-                                    <input type="text" id="inputMarginUrgent" name="nominal_margin_urgent" class="form-control fw-bold text-primary input-kalkulasi format-rp">
-                                </div>
-                                <div class="col-4">
-                                    <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
-                                    <input type="text" id="inputDendaUrgent" name="nominal_denda_urgent" class="form-control fw-bold text-danger input-kalkulasi format-rp" value="0">
-                                </div>
-                            </div>
-                        </div>
+                    <hr>
+                    <dl class="row mb-4">
+                        <dt class="col-7 text-muted">Grand Total Potongan</dt>
+                        <dd class="col-5 text-end fw-bold fs-5 text-danger" id="summary_total_bayar">Rp 0</dd>
+                        
+                        <dt class="col-6 text-muted">Sisa Gaji di ATM</dt>
+                        <dd class="col-6 text-end fw-bold fs-5 text-success" id="summary_sisa_gaji">Rp 0</dd>
+                    </dl>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" id="btnSubmit" class="btn btn-primary btn-lg">
+                            <i class="fa-solid fa-check-circle me-2"></i> Proses Bayar Angsuran
+                        </button>
+                        <button type="button" class="btn btn-outline-danger mt-2" onclick="bukaModalPelunasan()">
+                            <i class="fa-solid fa-gavel me-2"></i> Pelunasan Dipercepat
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <div class="mt-4 p-3 bg-dark text-white rounded shadow-sm d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">TOTAL PEMBAYARAN KASIR</h5>
-                    <small class="text-white-50">Kalkulasi otomatis utama + urgent (jika dicentang).</small>
-                </div>
-                <div class="text-end">
-                    <div class="fs-2 fw-bold text-warning" id="txtTotalBayar">Rp 0</div>
-                </div>
-            </div>
-
-            <div class="row mt-3 justify-content-end">
-                <div class="col-md-5">
-                    <label class="form-label fw-bold small text-secondary">Biaya EDC / Admin Kasir (Rp)</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-white fw-bold">Rp</span>
-                        <input type="text" id="inputEDC" class="form-control border-secondary bg-light shadow-sm input-kalkulasi format-rp" value="0" placeholder="0">
-                    </div>
-                </div>
-            </div>
-
-            <div class="text-end mt-4">
-                <button type="submit" id="btnSubmit" class="btn btn-success btn-lg px-5 shadow fw-bold">
-                    <i class="fa-solid fa-check-circle me-2"></i> Proses Bayar Angsuran
-                </button>
             </div>
         </form>
+    </div>
+</div>
 
-        <div id="pesanKosong" class="alert alert-info text-center mt-3" style="display: none;">
-            <i class="fa-solid fa-face-smile fa-2x mb-2 d-block"></i>
-            Mantap! Anggota ini tidak memiliki tagihan aktif.
+<!-- Modal Pelunasan Keseluruhan -->
+<div class="modal fade" id="modalPelunasan" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form id="formPelunasan" class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-hand-holding-dollar me-2"></i> Pelunasan Dipercepat Keseluruhan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <input type="hidden" id="pelunasan_no_anggota">
+                
+                <div class="alert alert-warning border-0 shadow-sm small">
+                    <i class="fa-solid fa-circle-info me-1"></i> Sistem akan secara otomatis menghitung seluruh total pokok, sisa margin, dan denda keterlambatan berjalan pada pinjaman <b>Multiguna, Tempo, Gaji, maupun THR</b> yang belum lunas.
+                </div>
+
+                <div class="table-responsive bg-white rounded border shadow-sm mb-3">
+                    <table class="table table-sm table-bordered mb-0 text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Jenis</th>
+                                <th>Sisa Pokok</th>
+                                <th>Sisa Margin</th>
+                                <th>EDC / Admin</th>
+                                <th>Denda Telat</th>
+                                <th class="bg-warning">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-start fw-bold">Multiguna/Tempo</td>
+                                <td id="pel_pokok_utama">Rp 0</td>
+                                <td id="pel_margin_utama">Rp 0</td>
+                                <td><input type="text" id="pel_edc_utama" class="form-control form-control-sm text-center fw-bold text-primary format-rp-pelunasan" value="0"></td>
+                                <td><input type="text" id="pel_denda_utama" class="form-control form-control-sm text-center fw-bold text-danger format-rp-pelunasan" value="0"></td>
+                                <td id="pel_total_utama" class="fw-bold bg-warning bg-opacity-10">Rp 0</td>
+                            </tr>
+                            <tr>
+                                <td class="text-start fw-bold">Dana Urgent</td>
+                                <td id="pel_pokok_urgent">Rp 0</td>
+                                <td id="pel_margin_urgent">Rp 0</td>
+                                <td><input type="text" id="pel_edc_urgent" class="form-control form-control-sm text-center fw-bold text-primary format-rp-pelunasan" value="0"></td>
+                                <td><input type="text" id="pel_denda_urgent" class="form-control form-control-sm text-center fw-bold text-danger format-rp-pelunasan" value="0"></td>
+                                <td id="pel_total_urgent" class="fw-bold bg-warning bg-opacity-10">Rp 0</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-dark">
+                            <tr>
+                                <td colspan="5" class="text-end fw-bold">GRAND TOTAL PELUNASAN:</td>
+                                <td id="pel_grand_total" class="fw-bold text-warning fs-5">Rp 0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="form-check form-switch mb-3 p-3 border rounded shadow-sm bg-white">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="chkTanpaDendaPelunasan" style="cursor:pointer; transform: scale(1.3);">
+                    <label class="form-check-label fw-bold text-danger pt-1" for="chkTanpaDendaPelunasan">Pelunasan Tanpa Denda (Bebas Denda Keterlambatan)</label>
+                </div>
+
+                <div class="row g-3 bg-white p-3 rounded mb-3 border shadow-sm mx-0">
+                    <div class="col-12">
+                        <label class="small text-muted fw-bold">Total Saldo Simpanan (Pokok + Wajib)</label>
+                        <div class="fs-5 fw-bold text-success" id="dispPelunasanSimpanan">Rp 0</div>
+                        <small id="warningSimpanan" class="text-danger fw-bold d-none mt-1"><i class="fa-solid fa-triangle-exclamation"></i> Saldo simpanan tidak mencukupi untuk melakukan pelunasan keseluruhan!</small>
+                    </div>
         </div>
 
-        <div id="areaCetak" class="text-center mt-4 border p-4 bg-white rounded shadow-sm" style="display: none;">
-            <h5 class="text-success fw-bold mb-3"><i class="fa-solid fa-circle-check me-2"></i>Pembayaran Berhasil Diproses!</h5>
-            <p class="text-muted mb-4">Silakan cetak struk pembayaran di bawah ini sebagai bukti transaksi sah anggota.</p>
-            <div id="tombolCetak"></div>
-        </div>
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold">Metode Pembayaran *</label>
+                        <select id="metode_pelunasan" class="form-select fw-bold border-danger" required>
+                            <option value="tunai">Pembayaran Tunai Langsung (Kasir)</option>
+                            <option value="simpanan">Potong Dari Saldo Simpanan Anggota</option>
+                        </select>
+                    </div>
+                </div>
 
+                <div id="areaKekuranganTunai" class="row g-3 bg-danger bg-opacity-10 p-3 rounded mt-3 mb-3 border border-danger shadow-sm mx-0" style="display: none;">
+                    <div class="col-12">
+                        <label class="small fw-bold text-danger"><i class="fa-solid fa-cash-register me-1"></i> NOMINAL DIBAYARKAN TUNAI / TRANSFER</label>
+                        <div class="input-group mt-2">
+                            <span class="input-group-text bg-white fw-bold text-danger">Rp</span>
+                            <input type="text" id="inputPelunasanTunai" class="form-control form-control-lg fw-bold text-danger format-rp-pelunasan" value="0" required>
+                        </div>
+                        <small class="text-muted mt-1 d-block">Nominal ini harus diisi sesuai transfer/tunai untuk mencukupi kekurangan pelunasan.</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" id="btnSubmitPelunasan" class="btn btn-danger fw-bold"><i class="fa-solid fa-check me-1"></i> Eksekusi Pelunasan</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -243,352 +202,5 @@
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<script>
-    // Fungsi bantuan untuk mengubah angka menjadi format Rupiah
-    function formatRp(angka) {
-        return `Rp ${Number(angka || 0).toLocaleString('id-ID')}`;
-    }
-
-    function getValInput(id) {
-        let el = document.getElementById(id);
-        if(!el || !el.value) return 0;
-        return parseFloat(el.value.replace(/\./g, '').replace(/,/g, '.')) || 0;
-    }
-    
-    function setValInput(id, val) {
-        document.getElementById(id).value = val > 0 ? Number(val).toLocaleString('id-ID') : '';
-    }
-
-    let currentDataUtama = null;
-    let currentDataUrgent = null;
-
-    // Load Data Anggota
-    document.addEventListener('DOMContentLoaded', function() {
-        let t = new Date();
-        document.getElementById('inputTanggalBayar').value = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-        
-        // Recalculate secara real-time dari backend jika tanggal diubah
-        document.getElementById('inputTanggalBayar').addEventListener('change', function() {
-            if(document.getElementById('selectAnggota').value) {
-                document.getElementById('selectAnggota').dispatchEvent(new Event('change'));
-            }
-        });
-
-        fetch('/api/anggota_list')
-        .then(r => r.json())
-        .then(res => {
-            const select = document.getElementById('selectAnggota');
-            if(res.status === 'success') {
-                res.data.forEach(item => {
-                    select.innerHTML += `<option value="${item.no_anggota}">${item.no_anggota} - ${item.nama_anggota}</option>`;
-                });
-            }
-            
-            // Inisialisasi Select2 agar dropdown anggota bisa diketik & dicari
-            if (typeof $ !== 'undefined' && $.fn.select2) {
-                select.options[0].text = ''; // Kosongkan text awal agar placeholder bekerja
-                $('#selectAnggota').select2({
-                    theme: 'bootstrap-5',
-                    width: '100%',
-                    placeholder: '-- Ketik Nama / No Anggota --'
-                }).on('select2:select', function(e) {
-                    this.dispatchEvent(new Event('change')); // Memicu proses cek tagihan otomatis
-                });
-            }
-
-            // Event listeners untuk mengunci/membuka input saat ceklis Minus diklik
-            if(document.getElementById('checkMinusUtama')) {
-                document.getElementById('checkMinusUtama').addEventListener('change', function() {
-                    let ro = !this.checked;
-                    document.getElementById('inputPokokUtama').readOnly = ro;
-                    document.getElementById('inputMarginUtama').readOnly = ro;
-                    document.getElementById('inputDendaUtama').readOnly = ro;
-                });
-            }
-            if(document.getElementById('checkMinusUrgent')) {
-                document.getElementById('checkMinusUrgent').addEventListener('change', function() {
-                    let ro = !this.checked;
-                    document.getElementById('inputPokokUrgent').readOnly = ro;
-                    document.getElementById('inputMarginUrgent').readOnly = ro;
-                    if(document.getElementById('inputDendaUrgent')) document.getElementById('inputDendaUrgent').readOnly = ro;
-                });
-            }
-        });
-    });
-    
-    document.getElementById('filterTagihan').addEventListener('change', applyFilter);
-
-    // Event Pilih Anggota -> Tampilkan Tagihan
-    document.getElementById('selectAnggota').addEventListener('change', function() {
-        const no_anggota = this.value;
-        const form = document.getElementById('formPembayaran');
-        const pesanKosong = document.getElementById('pesanKosong');
-        
-        // Reset Layout
-        form.style.display = 'none'; pesanKosong.style.display = 'none';
-        document.getElementById('areaUtama').style.display = 'none';
-        document.getElementById('areaUrgent').style.display = 'none';
-        document.getElementById('areaCetak').style.display = 'none';
-        document.getElementById('checkBayarUrgent').checked = false;
-        hitungTotal();
-        
-        fetch(`/api/info_tagihan/${no_anggota}?tanggal=${document.getElementById('inputTanggalBayar').value}`)
-        .then(r => r.json())
-        .then(res => {
-            currentDataUtama = res.data_utama;
-            currentDataUrgent = res.data_urgent;
-
-            // Tampilkan total Dana Urgent di Rincian Tagihan Sistem (Area Utama)
-            let totalUrgentSystem = 0;
-            if(res.data_urgent) {
-                totalUrgentSystem = Number(res.data_urgent.tagihan_pokok || 0) + Number(res.data_urgent.tagihan_margin || 0) + Number(res.data_urgent.kalkulasi_denda || 0);
-            }
-            document.getElementById('dispTotalUrgentSystem').innerText = formatRp(totalUrgentSystem);
-
-            if(res.data_utama) {
-                document.getElementById('id_utama').value = res.data_utama.id;
-                
-                // Simpan data no dan nama untuk dikirim ke tabel simpanan
-                document.getElementById('id_utama').dataset.no = res.data_utama.no_anggota;
-                document.getElementById('id_utama').dataset.nama = res.data_utama.nama_anggota;
-
-                document.getElementById('txtJenisUtama').innerText = res.data_utama.jenis_pinjaman;
-                document.getElementById('txtAngsuranKe').value = res.data_utama.angsuran_ke;
-                document.getElementById('txtJatuhTempoUtama').innerText = res.data_utama.jatuh_tempo;
-                
-                // Menampilkan Sisa Pokok dan Sisa Margin
-                document.getElementById('txtSisaPokok').innerText = `Rp ${Number(res.data_utama.sisa_pokok || 0).toLocaleString('id-ID')}`;
-                document.getElementById('txtSisaMargin').innerText = `Rp ${Number(res.data_utama.sisa_margin || 0).toLocaleString('id-ID')}`;
-                
-                document.getElementById('dispTagihanPokokUtama').innerText = formatRp(res.data_utama.tagihan_pokok);
-                document.getElementById('dispTagihanMarginUtama').innerText = formatRp(res.data_utama.tagihan_margin);
-                
-                let sisaPokokUtama = Math.max(0, (res.data_utama.tagihan_pokok || 0) - (res.data_utama.angsuran_pokok || 0));
-                let sisaMarginUtama = Math.max(0, (res.data_utama.tagihan_margin || 0) - (res.data_utama.angsuran_margin || 0));
-                
-                setValInput('inputPokokUtama', sisaPokokUtama);
-                setValInput('inputMarginUtama', sisaMarginUtama);
-                
-                document.getElementById('inputPokokUtama').readOnly = true;
-                document.getElementById('inputMarginUtama').readOnly = true;
-                document.getElementById('inputDendaUtama').readOnly = true;
-                if(document.getElementById('checkMinusUtama')) document.getElementById('checkMinusUtama').checked = false;
-
-                // Menampilkan Denda
-                const dendaUtama = res.data_utama.kalkulasi_denda || 0;
-                setValInput('inputDendaUtama', dendaUtama);
-                document.getElementById('dispTagihanDendaUtama').innerText = formatRp(dendaUtama);
-                if(dendaUtama > 0) {
-                    document.getElementById('txtInfoDendaUtama').innerText = `(Telat ${res.data_utama.od_hari} Hari)`;
-                } else {
-                    document.getElementById('txtInfoDendaUtama').innerText = '';
-                }
-
-                // Logika Penanda Bunga (3% atau 20%)
-                const badge = document.getElementById('badgeBungaUtama');
-                if(res.data_utama.jenis_pinjaman === 'Multiguna') {
-                    badge.innerText = 'Bunga: 3%'; badge.className = 'badge bg-success fs-6';
-                } else {
-                    badge.innerText = 'Bunga: 20%'; badge.className = 'badge bg-danger fs-6';
-                }
-            }
-
-            if(res.data_urgent) {
-                document.getElementById('id_urgent').value = res.data_urgent.id;
-                document.getElementById('txtJatuhTempoUrgent').innerText = res.data_urgent.tgl_pencairan || '-';
-                
-                document.getElementById('dispTagihanPokokUrgent').innerText = formatRp(res.data_urgent.tagihan_pokok);
-                document.getElementById('dispTagihanMarginUrgent').innerText = formatRp(res.data_urgent.tagihan_margin);
-                
-                let sisaPokokUrgent = Math.max(0, (res.data_urgent.tagihan_pokok || 0) - (res.data_urgent.angsuran_pokok || 0));
-                let sisaMarginUrgent = Math.max(0, (res.data_urgent.tagihan_margin || 0) - (res.data_urgent.angsuran_margin || 0));
-                
-                setValInput('inputPokokUrgent', sisaPokokUrgent);
-                setValInput('inputMarginUrgent', sisaMarginUrgent);
-                
-                document.getElementById('inputPokokUrgent').readOnly = true;
-                document.getElementById('inputMarginUrgent').readOnly = true;
-                if(document.getElementById('inputDendaUrgent')) document.getElementById('inputDendaUrgent').readOnly = true;
-                if(document.getElementById('checkMinusUrgent')) document.getElementById('checkMinusUrgent').checked = false;
-                
-                // Jika areaUrgent memiliki input denda
-                const dendaUrgent = res.data_urgent.kalkulasi_denda || 0;
-                if(document.getElementById('inputDendaUrgent')) {
-                    setValInput('inputDendaUrgent', dendaUrgent);
-                    document.getElementById('dispTagihanDendaUrgent').innerText = formatRp(dendaUrgent);
-                }
-            }
-
-            // Reset input simpanan wajib kembali ke 0 setiap ganti anggota
-            document.getElementById('inputSimpananWajib').value = 0;
-            document.getElementById('inputEDC').value = 0;
-
-            applyFilter();
-        });
-    });
-
-    function applyFilter() {
-        const filter = document.getElementById('filterTagihan').value;
-        const areaUtama = document.getElementById('areaUtama');
-        const areaUrgent = document.getElementById('areaUrgent');
-        const form = document.getElementById('formPembayaran');
-        const pesanKosong = document.getElementById('pesanKosong');
-
-        let showUtama = false;
-        let showUrgent = false;
-
-        if (currentDataUtama && (filter === 'Semua' || filter === currentDataUtama.jenis_pinjaman)) showUtama = true;
-        if (currentDataUrgent && (filter === 'Semua' || filter === currentDataUrgent.jenis_dana_urgent)) showUrgent = true;
-
-        areaUtama.style.display = showUtama ? 'block' : 'none';
-        areaUrgent.style.display = showUrgent ? 'block' : 'none';
-
-        if (!showUtama && !showUrgent) {
-            form.style.display = 'none';
-            pesanKosong.style.display = 'block';
-            if (currentDataUtama || currentDataUrgent) pesanKosong.innerHTML = `<i class="fa-solid fa-filter fa-2x mb-2 d-block mt-3"></i>Tidak ada tagihan yang cocok dengan filter terpilih.`;
-            else pesanKosong.innerHTML = `<i class="fa-solid fa-face-smile fa-2x mb-2 d-block mt-3"></i>Mantap! Anggota ini tidak memiliki tagihan aktif.`;
-        } else {
-            form.style.display = 'block';
-            pesanKosong.style.display = 'none';
-        }
-
-        if(document.getElementById('checkBayarUrgent')) {
-            document.getElementById('checkBayarUrgent').checked = showUrgent;
-            document.getElementById('checkBayarUrgent').dispatchEvent(new Event('change'));
-        }
-
-        hitungTotal();
-    }
-
-    // Interaksi Centang Dana Urgent
-    const checkBayarUrgent = document.getElementById('checkBayarUrgent');
-    if (checkBayarUrgent) {
-        checkBayarUrgent.addEventListener('change', function() {
-            const areaInput = document.getElementById('formInputUrgent');
-            if(this.checked) {
-                areaInput.style.opacity = '1'; areaInput.style.pointerEvents = 'auto';
-            } else {
-                areaInput.style.opacity = '0.5'; areaInput.style.pointerEvents = 'none';
-            }
-            hitungTotal();
-        });
-    }
-
-    // Interaksi Input Kalkulasi Lainnya
-    document.querySelectorAll('.input-kalkulasi').forEach(input => {
-        input.addEventListener('input', function() {
-            if(this.classList.contains('format-rp')) {
-                let val = this.value.replace(/[^0-9,]/g, '');
-                if (val) {
-                    let parts = val.split(',');
-                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                    this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
-                }
-            }
-            hitungTotal();
-        });
-    });
-
-    function hitungTotal() {
-        let finalTotal = 0;
-        
-        if (document.getElementById('areaUtama').style.display === 'block') {
-            finalTotal += getValInput('inputPokokUtama') + 
-                          getValInput('inputMarginUtama') + 
-                          getValInput('inputDendaUtama');
-        }
-
-        // Ambil nominal simpanan wajib
-        let simpananWajib = getValInput('inputSimpananWajib');
-        finalTotal += simpananWajib; // Tambahkan ke total akhir
-        
-        // Ambil nominal EDC
-        let edc = getValInput('inputEDC');
-        finalTotal += edc;
-
-        let chkUrgent = document.getElementById('checkBayarUrgent');
-        if(chkUrgent && chkUrgent.checked && document.getElementById('areaUrgent').style.display === 'block') { 
-            finalTotal += getValInput('inputPokokUrgent') + 
-                          getValInput('inputMarginUrgent') + 
-                          getValInput('inputDendaUrgent');
-        }
-        document.getElementById('txtTotalBayar').innerText = `Rp ${finalTotal.toLocaleString('id-ID')}`;
-    }
-
-    // Eksekusi Submit Database
-    document.getElementById('formPembayaran').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const btnSubmit = document.getElementById('btnSubmit');
-        btnSubmit.disabled = true; btnSubmit.innerHTML = 'Memproses...';
-
-        const payload = {
-            id_utama: document.getElementById('id_utama').value,
-            no_anggota: document.getElementById('id_utama').dataset.no, // Bawa identitas untuk tabel simpanan
-            nama_anggota: document.getElementById('id_utama').dataset.nama,
-            tanggal_bayar: document.getElementById('inputTanggalBayar').value,
-            bayar_utama: document.getElementById('areaUtama').style.display === 'block',
-            nominal_pokok_utama: getValInput('inputPokokUtama'),
-            nominal_margin_utama: getValInput('inputMarginUtama'),
-            nominal_denda_utama: getValInput('inputDendaUtama'),
-            nominal_simpanan_wajib: getValInput('inputSimpananWajib'),
-            angsuran_ke_utama: document.getElementById('areaUtama').style.display === 'block' ? document.getElementById('txtAngsuranKe').value : null,
-            edc_utama: document.getElementById('areaUtama').style.display === 'block' ? getValInput('inputEDC') : 0,
-
-            id_urgent: document.getElementById('id_urgent') ? document.getElementById('id_urgent').value : null,
-            bayar_urgent: document.getElementById('checkBayarUrgent') ? document.getElementById('checkBayarUrgent').checked : false,
-            nominal_pokok_urgent: document.getElementById('inputPokokUrgent') ? getValInput('inputPokokUrgent') : 0,
-            nominal_margin_urgent: document.getElementById('inputMarginUrgent') ? getValInput('inputMarginUrgent') : 0,
-            nominal_denda_urgent: document.getElementById('inputDendaUrgent') ? getValInput('inputDendaUrgent') : 0,
-            edc_urgent: document.getElementById('areaUtama').style.display !== 'block' ? getValInput('inputEDC') : 0
-        };
-
-        fetch('/api/bayar_angsuran', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(result => {
-            const alertBox = document.getElementById('alertBox');
-            if(result.status === 'success') {
-                alertBox.innerHTML = `<div class="alert alert-success fw-bold">${result.message}</div>`;
-                document.getElementById('formPembayaran').style.display = 'none';
-                document.getElementById('selectAnggota').selectedIndex = 0;
-                
-                // Tampilkan Tombol Cetak PDF & Excel
-                const areaCetak = document.getElementById('areaCetak');
-                const tombolCetak = document.getElementById('tombolCetak');
-                areaCetak.style.display = 'block';
-                tombolCetak.innerHTML = '';
-                
-                if(result.cetak_info && result.cetak_info.id_utama) {
-                    tombolCetak.innerHTML += `
-                        <div class="mb-3 p-3 bg-light rounded border">
-                            <h6 class="text-primary fw-bold mb-2">Struk Angsuran Utama</h6>
-                            <a href="/api/cetak_struk/utama/${result.cetak_info.id_utama}/pdf" target="_blank" class="btn btn-danger m-1"><i class="fa-solid fa-file-pdf me-1"></i> Cetak PDF</a>
-                            <a href="/api/cetak_struk/utama/${result.cetak_info.id_utama}/excel" target="_blank" class="btn btn-success m-1"><i class="fa-solid fa-file-excel me-1"></i> Cetak Excel</a>
-                        </div>
-                    `;
-                }
-                if(result.cetak_info && result.cetak_info.id_urgent) {
-                    tombolCetak.innerHTML += `
-                        <div class="mb-3 p-3 bg-light rounded border">
-                            <h6 class="text-warning fw-bold mb-2">Struk Dana Urgent</h6>
-                            <a href="/api/cetak_struk/urgent/${result.cetak_info.id_urgent}/pdf" target="_blank" class="btn btn-danger m-1"><i class="fa-solid fa-file-pdf me-1"></i> Cetak PDF</a>
-                            <a href="/api/cetak_struk/urgent/${result.cetak_info.id_urgent}/excel" target="_blank" class="btn btn-success m-1"><i class="fa-solid fa-file-excel me-1"></i> Cetak Excel</a>
-                        </div>
-                    `;
-                }
-            } else {
-                alertBox.innerHTML = `<div class="alert alert-danger">Gagal: ${result.message}</div>`;
-            }
-        })
-        .finally(() => {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fa-solid fa-check-circle me-2"></i> Proses Bayar Angsuran';
-            window.scrollTo(0,0);
-        });
-    });
-</script>
+<script src="/js/pembayaran.js"></script>
 {% endblock %}

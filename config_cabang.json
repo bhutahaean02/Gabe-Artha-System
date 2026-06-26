@@ -1,0 +1,18 @@
+{
+    "DEFAULT": {
+        "kota": "Tangerang",
+        "manager": "BERTON HUTAHAEAN"
+    },
+    "PUTAT": {
+        "kota": "Tangerang",
+        "manager": "N.SRI UTAMI"
+    },
+    "CILEGON": {
+        "kota": "Cilegon",
+        "manager": "NAMA MANAGER CILEGON"
+    },
+    "TAMBAK": {
+        "kota": "Serang",
+        "manager": "NAMA MANAGER TAMBAK"
+    }
+}

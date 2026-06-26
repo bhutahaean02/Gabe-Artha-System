@@ -4,6 +4,88 @@
 {% block page_title %}Dashboard Utama{% endblock %}
 
 {% block content %}
+<!-- KOLEKTIBILITAS CARDS -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-chart-pie me-2"></i>Evaluasi Kolektibilitas Anggota</h5>
+    </div>
+    <!-- Lancar -->
+    <div class="col-md-3">
+        <div class="card border-start border-5 border-success shadow-sm h-100">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-success fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">LANCAR</h6>
+                        <h3 class="fw-bold mb-0 text-dark" id="dash_kolek_lancar"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
+                    </div>
+                    <i class="fa-solid fa-user-check fa-3x text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Kurang Lancar -->
+    <div class="col-md-3">
+        <div class="card border-start border-5 border-warning shadow-sm h-100">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-warning fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">KURANG LANCAR</h6>
+                        <h3 class="fw-bold mb-0 text-dark" id="dash_kolek_kurang_lancar"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
+                    </div>
+                    <i class="fa-solid fa-user-clock fa-3x text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Macet -->
+    <div class="col-md-3">
+        <div class="card border-start border-5 border-danger shadow-sm h-100">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-danger fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">MACET</h6>
+                        <h3 class="fw-bold mb-0 text-dark" id="dash_kolek_macet"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
+                    </div>
+                    <i class="fa-solid fa-user-xmark fa-3x text-danger opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- WO -->
+    <div class="col-md-3">
+        <div class="card border-start border-5 border-dark shadow-sm h-100">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-dark fw-bold text-uppercase mb-1" style="letter-spacing: 1px; font-size: 0.75rem;">WRITE-OFF (WO)</h6>
+                        <h3 class="fw-bold mb-0 text-dark" id="dash_kolek_wo"><i class="fa-solid fa-spinner fa-spin fa-sm"></i></h3>
+                    </div>
+                    <i class="fa-solid fa-user-slash fa-3x text-dark opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KESIMPULAN KOLEKTIBILITAS -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0 fw-bold text-secondary"><i class="fa-solid fa-magnifying-glass-chart me-2"></i> Kesimpulan & Tindak Lanjut</h6>
+    </div>
+    <div class="card-body small">
+        <div id="kesimpulan-dinamis" class="alert alert-light border-secondary border-2 shadow-sm mb-3">
+            <p class="mb-0"><i class="fa-solid fa-spinner fa-spin me-2"></i> Menganalisis data kolektibilitas...</p>
+        </div>
+        <p class="mb-2">Berikut adalah interpretasi umum dan rekomendasi tindak lanjut untuk setiap kategori:</p>
+        <ul class="list-group list-group-flush" id="rekomendasi-statis">
+            <li class="list-group-item"><strong class="text-success">LANCAR:</strong> Anggota dalam kategori ini memiliki riwayat pembayaran yang baik dan tepat waktu. Ini adalah indikator portofolio yang sehat. Pertahankan hubungan baik dan tawarkan produk lain jika memungkinkan.</li>
+            <li class="list-group-item"><strong class="text-warning">KURANG LANCAR (1-6 bulan tunggakan):</strong> Kategori ini memerlukan perhatian. Anggota mulai menunjukkan kesulitan pembayaran. Tim marketing/collection harus mulai melakukan <span class="fw-bold">pemantauan aktif dan komunikasi persuasif</span> (telepon, kunjungan ringan) untuk mencegah tunggakan berlanjut.</li>
+            <li class="list-group-item"><strong class="text-danger">MACET (7-12 bulan tunggakan):</strong> Ini adalah kategori berisiko tinggi yang berdampak negatif pada arus kas. Diperlukan <span class="fw-bold">tindakan penagihan yang intensif</span>, negosiasi restrukturisasi utang, atau persiapan eksekusi jaminan jika ada.</li>
+            <li class="list-group-item"><strong class="text-dark">WO / WRITE-OFF (>12 bulan tunggakan):</strong> Pinjaman dalam kategori ini memiliki probabilitas sangat kecil untuk dapat ditagih kembali dan dianggap sebagai potensi kerugian (bad debt). Perlu dilakukan evaluasi untuk <span class="fw-bold">penghapusbukuan (write-off)</span> dari neraca agar tidak membebani laporan keuangan.</li>
+        </ul>
+    </div>
+</div>
+
 <!-- HIGHLIGHT DASHBOARD METRICS -->
 <div class="row g-4 mb-4">
     <!-- Kas Utama -->
@@ -50,6 +132,9 @@
 
 <!-- SECTION EVALUASI KEUANGAN -->
 <div class="row g-4 mb-4">
+    <div class="col-12">
+        <h5 class="fw-bold text-secondary"><i class="fa-solid fa-wallet me-2"></i>Ringkasan Kondisi Kas & Keuangan</h5>
+    </div>
     <!-- Evaluasi Harian -->
     <div class="col-md-6">
         <div class="card shadow-sm eval-card h-100">
@@ -138,6 +223,62 @@
                     document.getElementById('dash_total_simpanan').innerText = formatRp(evalData.summary_cards.total_simpanan);
                     document.getElementById('dash_total_anggota').innerText = evalData.summary_cards.total_anggota + ' Orang';
                 }
+
+            // Fetch Kolektibilitas
+            fetch('/api/dashboard/kolektibilitas')
+            .then(res => res.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    const d = res.data;
+                    document.getElementById('dash_kolek_lancar').innerText = `${d.lancar || 0} Anggota`;
+                    document.getElementById('dash_kolek_kurang_lancar').innerText = `${d.kurang_lancar || 0} Anggota`;
+                    document.getElementById('dash_kolek_macet').innerText = `${d.macet || 0} Anggota`;
+                    document.getElementById('dash_kolek_wo').innerText = `${d.wo || 0} Anggota`;
+
+                    // --- LOGIKA KESIMPULAN DINAMIS ---
+                    const kesimpulanDiv = document.getElementById('kesimpulan-dinamis');
+                    const totalAnggota = (d.lancar || 0) + (d.kurang_lancar || 0) + (d.macet || 0) + (d.wo || 0);
+
+                    if (totalAnggota === 0) {
+                        kesimpulanDiv.className = 'alert alert-info border-info border-2 shadow-sm mb-3';
+                        kesimpulanDiv.innerHTML = `<h6 class="alert-heading fw-bold"><i class="fa-solid fa-circle-info me-2"></i>Belum Ada Data</h6><p class="mb-0">Belum ada data anggota dengan pinjaman aktif yang dapat dianalisis kolektibilitasnya.</p>`;
+                    } else {
+                        const persenMacetWo = ((d.macet || 0) + (d.wo || 0)) / totalAnggota * 100;
+                        const persenKurangLancar = (d.kurang_lancar || 0) / totalAnggota * 100;
+                        
+                        let kesimpulanStatus = '';
+                        let kesimpulanPesan = '';
+                        let kesimpulanClass = '';
+                        let kesimpulanIcon = '';
+
+                        if (persenMacetWo > 25) {
+                            kesimpulanStatus = 'Kondisi Berisiko Tinggi';
+                            kesimpulanPesan = `Dengan <strong>${(d.macet || 0) + (d.wo || 0)} dari ${totalAnggota} anggota (${persenMacetWo.toFixed(1)}%)</strong> berada di kategori Macet/WO, kesehatan finansial koperasi berada dalam risiko tinggi. Arus kas dapat terganggu secara signifikan.`;
+                            kesimpulanClass = 'alert-danger border-danger';
+                            kesimpulanIcon = 'fa-triangle-exclamation';
+                        } else if (persenMacetWo > 10 || persenKurangLancar > 30) {
+                            kesimpulanStatus = 'Perlu Perhatian Khusus';
+                            kesimpulanPesan = `Terdapat <strong>${(d.kurang_lancar || 0)} anggota (${persenKurangLancar.toFixed(1)}%)</strong> Kurang Lancar dan <strong>${(d.macet || 0)} anggota</strong> Macet. Ini adalah sinyal peringatan dini. Perlu peningkatan intensitas monitoring dan penagihan untuk mencegah pemburukan.`;
+                            kesimpulanClass = 'alert-warning border-warning';
+                            kesimpulanIcon = 'fa-circle-exclamation';
+                        } else if (persenMacetWo < 5 && persenKurangLancar < 15) {
+                            kesimpulanStatus = 'Kondisi Keuangan Sehat';
+                            kesimpulanPesan = `Mayoritas besar anggota (<strong>${d.lancar || 0} dari ${totalAnggota}</strong>) berada di kategori Lancar. Ini menunjukkan portofolio pinjaman yang sehat dan risiko kredit yang terkendali dengan baik.`;
+                            kesimpulanClass = 'alert-success border-success';
+                            kesimpulanIcon = 'fa-shield-halved';
+                        } else {
+                            kesimpulanStatus = 'Kondisi Cukup Baik';
+                            kesimpulanPesan = `Kondisi keuangan secara umum cukup baik, namun terdapat <strong>${(d.kurang_lancar || 0)} anggota</strong> yang perlu perhatian agar tidak turun ke kategori Macet. Pertahankan komunikasi dan penagihan rutin.`;
+                            kesimpulanClass = 'alert-primary border-primary';
+                            kesimpulanIcon = 'fa-thumbs-up';
+                        }
+                        
+                        kesimpulanDiv.className = `alert ${kesimpulanClass} border-2 shadow-sm mb-3`;
+                        kesimpulanDiv.innerHTML = `<h6 class="alert-heading fw-bold"><i class="fa-solid ${kesimpulanIcon} me-2"></i>${kesimpulanStatus}</h6><p class="mb-0">${kesimpulanPesan}</p>`;
+                    }
+                }
+            }).catch(err => console.error('Error fetching kolektibilitas data:', err));
+
 
                 // Harian
                 document.getElementById('lblHariIni').innerText = evalData.harian.now.tanggal;

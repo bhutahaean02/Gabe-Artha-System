@@ -1,56 +1,63 @@
 # 🏦 Koperasi Gabe Artha System (GAS)
 
-Sistem Informasi Manajemen terpadu untuk **KSP Gabe Artha Nauli**. Aplikasi berbasis Web ini dibangun untuk mendigitalisasi proses bisnis operasional koperasi, mulai dari manajemen data anggota, proses pencairan pinjaman, pencatatan angsuran, manajemen simpanan, hingga pembukuan akuntansi yang tersinkronisasi secara otomatis.
+Sistem Informasi Manajemen (SIM) terpadu untuk **KSP Gabe Artha Nauli**. Aplikasi berbasis web ini dibangun untuk mendigitalisasi dan mengotomatisasi proses bisnis operasional koperasi, mulai dari manajemen anggota, pinjaman, simpanan, hingga sistem akuntansi multi-cabang yang terintegrasi.
 
 ---
 
 ## ✨ Fitur Utama
 
-Aplikasi ini dirancang dengan berbagai modul utama, di antaranya:
+Aplikasi ini dirancang dengan arsitektur modular yang mencakup berbagai fungsionalitas penting:
 
-- **👥 Manajemen Identitas Anggota**
-  - Pendaftaran anggota baru dengan *Auto-Generate* Nomor Anggota cerdas (berdasarkan Cabang & Tanggal).
-  - Penyimpanan berkas digital (KTP, KK, ID Card) dalam format PDF.
-  - Rekam jejak lengkap anggota (Simpanan, Pinjaman, dan Histori Transaksi).
-  - **Proteksi Akses (Cross-Session Prevention)** mencegah tabrakan sesi antara Hak Akses Anggota dan Admin.
-- **💸 Manajemen Pinjaman & Angsuran**
-  - Mendukung produk: **Multiguna / Tempo** dan **Dana Urgent (Gaji & THR)**.
-  - Sistem *Auto-Generate* jadwal angsuran (Tenor).
-  - Perhitungan otomatis denda keterlambatan (*Overdue Days*) secara *Real-time* (dengan fitur *Switch Denda Aktif/Migrasi*).
-  - Fasilitas *Top-Up* Pinjaman dengan pemotongan otomatis pada piutang berjalan.
-  - Penerimaan pembayaran *partial* (sebagian) dan input biaya **EDC / Admin Kasir**.
-- **💰 Manajemen Simpanan**
-  - Pencatatan Simpanan Pokok dan Simpanan Wajib.
-  - Penarikan Simpanan yang langsung memotong saldo dan terhubung dengan kas.
-- **📊 Sistem Akuntansi & Laporan (Multi-Cabang)**
-  - **Dukungan Multi-Cabang**: Data difilter dan dilimitasi otomatis berdasarkan lokasi cabang admin.
-  - **Jurnal Umum Otomatis**: Setiap transaksi (Pencairan, Angsuran, Pengeluaran) otomatis dicatat sebagai jurnal (Debit/Kredit).
-  - **Buku Besar, Laba Rugi, Neraca, dan Arus Kas**.
-  - Pencatatan Pengeluaran Operasional, **Manajemen Aset Operasional**, serta **Realisasi Anggaran**.
-  - Dashboard Evaluasi & Laporan Harian otomatis (Format Tabel & PDF) untuk rekap aktivitas cabang.
-- **🖨️ Cetak Dokumen Digital (PDF)**
-  - Cetak Bukti Angsuran (Struk).
-  - Cetak Surat Perjanjian Kredit (Akad Pinjaman).
-  - Cetak Surat Pernyataan Anggota.
-- **🔐 Sistem Approval Hierarki & Keamanan**
-  - Setiap transaksi krusial (seperti Pencairan Kas atau Pengeluaran Operasional) yang diinput oleh Admin akan masuk ke antrean (*Queue*).
-  - Wajib mendapatkan persetujuan (*Approval*) dari **Manager** sebelum dibukukan.
-  - **Pembatalan Transaksi (Void)** dilindungi oleh **Audit Logs** untuk rekam jejak.
-- **🔄 Modul Migrasi Sistem (Import Excel/CSV)**
-  - Impor data *Identitas, Multiguna, dan Urgent* secara massal dari sistem lama menggunakan CSV.
+-   ** Manajemen Anggota & CRM**
+    -   Pendaftaran anggota baru dengan *auto-generate* nomor anggota cerdas (berdasarkan cabang & tanggal).
+    -   Penyimpanan dan manajemen berkas digital (KTP, KK, dll.) dalam format PDF.
+    -   Rekam jejak lengkap anggota (profil, simpanan, histori pinjaman).
+    -   **Monitoring Lokasi Anggota**: Ekstraksi koordinat dari Google Maps dengan akurasi tinggi untuk pemetaan alamat tagih.
+
+-   **💸 Manajemen Pinjaman & Angsuran**
+    -   Dukungan untuk berbagai produk pinjaman: **Multiguna/Tempo** dan **Dana Urgent (Gaji & THR)**.
+    -   Sistem *auto-generate* jadwal angsuran (tenor) saat pencairan.
+    -   Perhitungan denda keterlambatan (*overdue*) secara *real-time* dengan *switch* on/off untuk mode migrasi.
+    -   Fasilitas **Top-Up** dan **Restrukturisasi** pinjaman.
+    -   Pencatatan pembayaran parsial dan biaya tambahan (EDC/Admin).
+
+-   **💰 Manajemen Simpanan**
+    -   Pencatatan Simpanan Pokok dan Simpanan Wajib.
+    -   Fungsi penarikan simpanan yang terintegrasi langsung dengan modul kas dan akuntansi.
+
+-   **📊 Akuntansi & Pelaporan Terintegrasi**
+    -   **Dukungan Multi-Cabang**: Data difilter otomatis berdasarkan hak akses dan lokasi cabang admin.
+    -   **Jurnal Umum Otomatis**: Setiap transaksi (pencairan, angsuran, pengeluaran) otomatis dicatat sebagai jurnal debit/kredit.
+    -   Laporan keuangan lengkap: **Buku Besar, Laba Rugi, Neraca, dan Arus Kas**.
+    -   Manajemen Aset Operasional dan Realisasi Anggaran.
+    -   Dashboard evaluasi performa dan laporan harian (PDF).
+
+-   **🔐 Keamanan & Alur Persetujuan (Approval)**
+    -   **Hierarki Approval**: Transaksi krusial (pencairan, pengeluaran) yang diinput oleh Admin memerlukan persetujuan dari **Manager**.
+    -   **Audit Logs**: Pencatatan semua aktivitas penting seperti pembatalan transaksi (void) untuk rekam jejak dan akuntabilitas.
+    -   **Proteksi Sesi**: Mencegah akses ilegal dan *crossed-session* antara role Admin dan Anggota.
+
+-   **🖨️ Cetak Dokumen Digital (PDF)**
+    -   Cetak Bukti Angsuran (Struk), Surat Perjanjian Kredit (Akad), Surat Pernyataan, dan dokumen lainnya secara dinamis.
+
+-   **🔄 Modul Migrasi Data**
+    -   Fasilitas impor data massal dari sistem lama menggunakan file Excel/CSV untuk data identitas dan pinjaman.
 
 ---
 
-## 💻 Teknologi yang Digunakan
+## 💻 Tumpukan Teknologi (Tech Stack)
 
-- **Backend Framework**: Python (Flask)
+-   **Backend**: Python dengan framework **Flask**.
+-   **Frontend**: HTML5, CSS3, JavaScript, **Bootstrap 5**.
 - **Database**: MySQL (`mysql-connector-python`)
-- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5, FontAwesome
-- **Library Tambahan**: 
-  - `fpdf` (Untuk menggambar/membuat dokumen PDF secara dinamis)
-  - `werkzeug.security` (Untuk proses *hashing* password keamanan login)
-  - `pandas` (Untuk manajemen data migrasi Excel/CSV)
-  - `python-dotenv` (Untuk manajemen environment variables)
+-   **Library Utama Python**:
+    -   `Flask`: Kerangka kerja web.
+    -   `mysql-connector-python`: Konektor untuk database MySQL.
+    -   `requests` & `BeautifulSoup4`: Untuk HTTP requests dan parsing HTML (digunakan pada ekstraksi koordinat Google Maps).
+    -   `pandas`: Untuk pemrosesan data pada modul migrasi (Excel/CSV).
+    -   `fpdf`: Untuk generasi dokumen PDF dinamis.
+    -   `werkzeug`: Untuk hashing password dan utilitas web server.
+    -   `python-dotenv`: Untuk manajemen variabel lingkungan (konfigurasi).
 
 ---
 
@@ -59,11 +66,12 @@ Aplikasi ini dirancang dengan berbagai modul utama, di antaranya:
 Ikuti langkah-langkah di bawah ini untuk menjalankan aplikasi di komputer lokal Anda:
 
 ### 1. Persiapan Perangkat Lunak (Prerequisites)
-- **Python** (Minimal versi 3.8+)
-- **XAMPP / Laragon / MySQL Server** (Untuk menjalankan database MySQL)
-- **Git**
+-   **Python** (Minimal versi 3.8+)
+-   **Server Database MySQL** (Contoh: XAMPP, Laragon, atau instalasi MySQL Server mandiri)
+-   **Git** (Untuk kloning repositori)
 
 ### 2. Kloning Repository
+Buka terminal atau command prompt, lalu jalankan perintah berikut:
 ```bash
 git clone https://github.com/bhutahaean02/Gabe-Artha-System.git
 cd Gabe-Artha-System
@@ -80,7 +88,7 @@ venv\Scripts\activate
 ### 4. Instalasi Library (Dependencies)
 Instal semua library yang dibutuhkan menggunakan pip:
 ```bash
-pip install Flask mysql-connector-python fpdf werkzeug pandas python-dotenv
+pip install Flask mysql-connector-python fpdf werkzeug pandas python-dotenv requests beautifulsoup4
 ```
 
 ### 5. Konfigurasi Database

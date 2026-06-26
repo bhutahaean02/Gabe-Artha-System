@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Convert Image to PDF - Koperasi{% endblock %}
+{% block page_title %}Convert Foto ke PDF{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow border-0 mb-4">
+            <div class="card-header bg-white pt-3 pb-2 border-bottom-0">
+                <h5 class="fw-bold text-primary"><i class="fa-solid fa-file-pdf me-2"></i>Gabungkan Foto Menjadi PDF</h5>
+                <p class="text-muted small mb-0">Pilih satu atau lebih foto untuk digabungkan menjadi sebuah file PDF. Fitur ini cocok untuk menyatukan berkas identitas atau jaminan anggota menjadi 1 dokumen rapih.</p>
+            </div>
+            <div class="card-body bg-light">
+                <form id="convertForm" enctype="multipart/form-data">
+                    <div class="mb-4 text-center p-5 border border-2 border-dashed rounded bg-white" id="drop-area" style="cursor: pointer; border-color: #cbd5e1 !important; transition: all 0.3s ease;">
+                        <i class="fa-solid fa-cloud-arrow-up fa-3x text-primary mb-3"></i>
+                        <h5 class="fw-bold">Klik atau Tarik Foto Kesini</h5>
+                        <p class="text-muted small">Format didukung: JPG, JPEG, PNG</p>
+                        <input type="file" id="images" name="images[]" class="d-none" accept="image/jpeg, image/png, image/jpg" multiple>
+                    </div>
+                    
+                    <div id="preview-container" class="row g-3 mb-4">
+                        <!-- Preview images akan muncul di sini otomatis -->
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm fw-bold py-2" id="btnConvert" disabled>
+                        <i class="fa-solid fa-file-export me-2"></i> Konversi & Unduh PDF
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+    .border-dashed { border-style: dashed !important; }
+    .img-preview-wrapper { position: relative; padding-top: 100%; overflow: hidden; border-radius: 8px; border: 1px solid #dee2e6; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .img-preview { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+    .remove-btn { position: absolute; top: 5px; right: 5px; background: rgba(220, 53, 69, 0.9); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: 0.2s; }
+    .remove-btn:hover { background: #c82333; transform: scale(1.1); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('images');
+        const previewContainer = document.getElementById('preview-container');
+        const btnConvert = document.getElementById('btnConvert');
+        const form = document.getElementById('convertForm');
+        
+        let selectedFiles = [];
+
+        // Membuka jendela dialog file
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        // Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('bg-light');
+            dropArea.style.borderColor = '#0d6efd';
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('bg-light');
+            dropArea.style.borderColor = '#cbd5e1';
+        }
+
+        dropArea.addEventListener('drop', function(e) {
+            handleFiles(e.dataTransfer.files);
+        }, false);
+
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            const newFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            selectedFiles = [...selectedFiles, ...newFiles];
+            updatePreview();
+        }
+
+        function updatePreview() {
+            previewContainer.innerHTML = '';
+            btnConvert.disabled = selectedFiles.length === 0;
+
+            selectedFiles.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-4 col-md-3';
+                    col.innerHTML = `
+                        <div class="img-preview-wrapper">
+                            <img src="${e.target.result}" class="img-preview" alt="Preview">
+                            <button type="button" class="remove-btn shadow-sm" onclick="removeFile(${index})">
+                                <i class="fa-solid fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="text-center small mt-1 text-truncate text-muted" title="${file.name}">${file.name}</div>
+                    `;
+                    previewContainer.appendChild(col);
+                }
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removeFile = function(index) {
+            selectedFiles.splice(index, 1);
+            updatePreview();
+        };
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('images[]', file));
+
+            const originalText = btnConvert.innerHTML;
+            btnConvert.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Sedang Mengkonversi...';
+            btnConvert.disabled = true;
+
+            fetch('/api/convert_to_pdf', { method: 'POST', body: formData })
+            .then(res => res.ok ? res.blob() : res.json().then(err => { throw new Error(err.message); }))
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Gabungan_Berkas_${new Date().getTime()}.pdf`;
+                a.click(); window.URL.revokeObjectURL(url);
+                Swal.fire('Sukses', 'Berkas PDF berhasil digabung & diunduh!', 'success');
+                selectedFiles = []; updatePreview(); fileInput.value = '';
+            }).catch(err => Swal.fire('Gagal', err.message, 'error'))
+            .finally(() => { btnConvert.innerHTML = originalText; btnConvert.disabled = false; });
+        });
+    });
+</script>
+{% endblock %}

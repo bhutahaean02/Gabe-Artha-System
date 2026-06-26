@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+{% block title %}Booklet Panduan - Koperasi{% endblock %}
+{% block page_title %}Booklet Panduan Penggunaan & Alur Sistem{% endblock %}
+
+{% block content %}
+<style>
+    .booklet-container {
+        max-width: 1000px;
+        margin: auto;
+    }
+    .step-box {
+        border-left: 4px solid var(--primary-blue);
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 0 12px 12px 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        margin-bottom: 25px;
+        position: relative;
+    }
+    .step-number {
+        position: absolute;
+        left: -20px;
+        top: 20px;
+        width: 35px;
+        height: 35px;
+        background-color: var(--accent-gold);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        box-shadow: 0 3px 10px rgba(242, 169, 0, 0.4);
+    }
+    .flow-arrow {
+        text-align: center;
+        color: var(--primary-blue);
+        margin: 15px 0;
+        font-size: 1.5rem;
+    }
+    .info-card {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        height: 100%;
+    }
+    @media print {
+        .sidebar, .navbar, .btn-print, #sidebarToggle, #fullscreenToggle {
+            display: none !important;
+        }
+        .content-wrapper {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+        }
+        body { background: white; }
+        .booklet-container { max-width: 100%; box-shadow: none; }
+        .card { border: none !important; box-shadow: none !important; }
+    }
+</style>
+
+<div class="booklet-container">
+    
+    <!-- Tombol Cetak -->
+    <div class="text-end mb-4 btn-print">
+        <button class="btn btn-danger shadow fw-bold px-4" onclick="window.print()">
+            <i class="fa-solid fa-file-pdf me-2"></i> Download Booklet (PDF)
+        </button>
+    </div>
+
+    <!-- Cover Booklet -->
+    <div class="card shadow-sm border-0 mb-5 text-center overflow-hidden">
+        <div class="card-body py-5 text-white" style="background: linear-gradient(135deg, #0056A6 0%, #003d7a 100%);">
+            <i class="fa-solid fa-building-columns fa-4x text-warning mb-3"></i>
+            <h1 class="fw-bold tracking-wider text-uppercase" style="letter-spacing: 2px;">Buku Panduan Penggunaan</h1>
+            <h4 class="text-white-50">Koperasi Gabe Artha System (GAS)</h4>
+            <p class="mt-4 mb-0 px-5 fw-light">Buku saku ini merangkum cara penggunaan sistem informasi manajemen terpadu, serta menjelaskan alur otomatisasi keuangan, akuntansi, dan persetujuan (approval) secara menyeluruh.</p>
+        </div>
+    </div>
+
+    <!-- BAB 1: PENGENALAN SISTEM & DASHBOARD -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-gauge me-2"></i> BAB I : Pengenalan Sistem & Dashboard</h4>
+    <div class="step-box ms-3">
+        <div class="step-number">1</div>
+        <h5 class="fw-bold text-dark">Dashboard Utama (Ringkasan Eksekutif)</h5>
+        <p class="text-muted small mb-2">Halaman pertama setelah login menyajikan ringkasan keuangan dan operasional secara *real-time*.</p>
+        <ul class="text-muted small">
+            <li><b>Total Kas Saat Ini:</b> Menampilkan ketersediaan uang tunai dan saldo bank yang ada di koperasi.</li>
+            <li><b>Pinjaman Beredar:</b> Total saldo sisa piutang (pokok pinjaman) yang masih berada di tangan anggota.</li>
+            <li><b>Kewajiban Simpanan:</b> Total gabungan seluruh simpanan wajib dan pokok milik anggota.</li>
+            <li><b>Evaluasi Harian & Mingguan:</b> Perbandingan langsung antara pendapatan & pengeluaran hari ini/minggu ini dengan periode yang sama di bulan lalu.</li>
+            <li><b>Trend Keuangan (Grafik):</b> Visualisasi garis (Line Chart) untuk melacak tren Pemasukan, Pengeluaran, dan Laba Bersih setiap bulan.</li>
+        </ul>
+    </div>
+
+    <!-- BAB 2: MANAJEMEN DATA ANGGOTA -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-users me-2"></i> BAB II : Manajemen Data Anggota</h4>
+    <div class="step-box ms-3">
+        <div class="step-number">2</div>
+        <h5 class="fw-bold text-dark">Menu Data Anggota & Anggota Lunas</h5>
+        <p class="text-muted small mb-2">Pusat registrasi dan penyimpanan biodata anggota.</p>
+        <ul class="text-muted small">
+            <li><b>Daftar Anggota:</b> Tabel yang menampilkan semua anggota dengan fitur pencarian cepat. Memiliki tombol 'Lihat Detail' untuk membuka seluruh profil, histori transaksi, dan buku simpanan anggota.</li>
+            <li><b>Form Tambah Anggota:</b> 
+                <ul>
+                    <li><b>No Anggota (Generate):</b> Tombol "Generate" akan membuat nomor unik berdasarkan cabang dan tanggal registrasi secara otomatis.</li>
+                    <li><b>Data Pekerjaan & Bank:</b> Kolom untuk mencatat instansi tempat bekerja, nomor JMO (Jamsostek Mobile), dan rekening bank anggota untuk autodebet/transfer.</li>
+                    <li><b>Penanggung Jawab:</b> Data kontak darurat (keluarga/kerabat) yang bisa dihubungi.</li>
+                    <li><b>Upload Berkas PDF:</b> Fitur *paperless* untuk mengunggah scan KTP, KK, dan ID Card anggota maksimal 5MB.</li>
+                </ul>
+            </li>
+            <li><b>Anggota Lunas:</b> Daftar anggota yang sebelumnya pernah meminjam namun saat ini sudah tidak memiliki tunggakan/pinjaman aktif.</li>
+        </ul>
+    </div>
+
+    <!-- BAB 3: PROSES PENCAIRAN PINJAMAN -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-money-bill-transfer me-2"></i> BAB III : Proses Pencairan Pinjaman</h4>
+    <div class="step-box ms-3">
+        <div class="step-number">3</div>
+        <h5 class="fw-bold text-dark">Pencairan Multiguna & Tempo</h5>
+        <p class="text-muted small mb-2">Digunakan untuk mencairkan dana pinjaman dengan jangka waktu (tenor) bulanan.</p>
+        <ul class="text-muted small">
+            <li><b>Cek Sisa Hutang (Top-Up):</b> Fitur cerdas untuk mengecek apakah anggota masih memiliki sisa hutang. Jika ada, sisa hutang tersebut bisa langsung dimasukkan ke kolom <b>Potongan Angsuran</b> untuk dilunasi melalui pencairan baru ini.</li>
+            <li><b>Ketetapan Pinjaman:</b> Input Plafon (Besar Pinjaman), Tenor (Bulan), dan Bunga Flat per bulan (%). Sistem otomatis membuat jadwal angsuran setiap bulannya.</li>
+            <li><b>Potongan-potongan:</b> Terdiri dari potongan Jamsostek, Administrasi, Dana Kematian, Simpanan Pokok, dan PPAP. Sistem akan menghitung otomatis "Terima Bersih" yang akan diserahkan ke anggota.</li>
+        </ul>
+    </div>
+    <div class="step-box ms-3">
+        <div class="step-number">4</div>
+        <h5 class="fw-bold text-dark">Pencairan Dana Urgent (Gaji & THR)</h5>
+        <p class="text-muted small mb-2">Pinjaman talangan cepat sekali bayar (lunas bulan depan).</p>
+        <ul class="text-muted small">
+            <li><b>Karakteristik:</b> Tidak ada potongan rumit. Hanya input nominal pinjaman.</li>
+            <li><b>Margin Otomatis:</b> Sistem otomatis menghitung jasa/margin sebesar 20% dari pokok pinjaman.</li>
+            <li><b>Jatuh Tempo:</b> Ditentukan di tanggal pembayaran bulan berikutnya tanpa sistem tenor berkepanjangan.</li>
+        </ul>
+    </div>
+
+    <!-- BAB 4: MONITORING & PEMBAYARAN -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-cash-register me-2"></i> BAB IV : Monitoring & Pembayaran Angsuran</h4>
+    <div class="step-box ms-3">
+        <div class="step-number">5</div>
+        <h5 class="fw-bold text-dark">Monitoring Pinjaman (Overdue)</h5>
+        <p class="text-muted small mb-2">Panel kontrol untuk melihat tagihan yang belum dibayar.</p>
+        <ul class="text-muted small">
+            <li>Menyajikan data anggota yang mendekati jatuh tempo atau sudah lewat jatuh tempo (Overdue).</li>
+            <li><b>Denda Real-time:</b> Kolom denda terus berjalan dan bertambah otomatis setiap harinya jika belum dibayar sesuai persentase yang ditetapkan (0.5% - 0.7% per hari).</li>
+            <li>Dilengkapi 4 kartu ringkasan di atas tabel: Jatuh Tempo Hari Ini, Tunggakan Bulan Ini, Tunggakan 1-6 Bulan, dan Lebih 6 Bulan.</li>
+        </ul>
+    </div>
+    <div class="step-box ms-3">
+        <div class="step-number">6</div>
+        <h5 class="fw-bold text-dark">Kasir Pembayaran Angsuran</h5>
+        <p class="text-muted small mb-2">Pusat penerimaan uang masuk dari anggota.</p>
+        <ul class="text-muted small">
+            <li><b>Filter Tagihan:</b> Kasir memilih nama anggota, lalu sistem memunculkan tagihan Multiguna/Tempo atau Urgent terdekat yang belum lunas.</li>
+            <li><b>Pembayaran Minus (Sebagian):</b> Jika anggota tidak bisa membayar *full*, kasir dapat mencentang "Pembayaran Minus" dan mengetik nominal seadanya. Sistem akan menghitung sisa hutang untuk ditagih bulan depan.</li>
+            <li><b>Titipan Simpanan Wajib & EDC:</b> Sambil membayar angsuran, kasir bisa sekalian menginput setoran Simpanan Wajib dan biaya admin transfer (EDC).</li>
+            <li><b>Pelunasan Dipercepat:</b> Tombol merah di bawah form. Mengakumulasikan seluruh sisa pokok, sisa margin (bisa diedit menjadi tanpa margin), dan denda dalam satu struk. Mendukung pembayaran dengan cara potong saldo simpanan anggota.</li>
+        </ul>
+    </div>
+
+    <!-- BAB 5: SIMPANAN, PENGELUARAN & ASET -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-piggy-bank me-2"></i> BAB V : Simpanan, Pengeluaran & Aset</h4>
+    
+    <div class="step-box ms-3">
+        <div class="step-number">7</div>
+        <h5 class="fw-bold text-dark">Buku Simpanan Anggota</h5>
+        <p class="text-muted small mb-2">Merekam riwayat uang tabungan anggota.</p>
+        <ul class="text-muted small">
+            <li><b>Saldo:</b> Terbagi dua yaitu Simpanan Pokok (hanya dibayar awal saat pencairan) dan Simpanan Wajib (dibayar tiap bulan).</li>
+            <li><b>Penarikan Simpanan:</b> Jika anggota berhenti atau butuh uang, mereka bisa menarik simpanannya. Sistem akan otomatis mengurangi saldo kas bank/tunai koperasi (Auto-Jurnal Kredit Kas).</li>
+        </ul>
+    </div>
+    <div class="step-box ms-3">
+        <div class="step-number">8</div>
+        <h5 class="fw-bold text-dark">Pengeluaran & Aset Operasional</h5>
+        <ul class="text-muted small mb-0">
+            <li><b>Pengeluaran Operasional:</b> Form input biaya-biaya kantor (listrik, gaji karyawan, ATK, dll). Harus memilih <b>Sumber Dana</b> (contoh: Kas Kecil) dan <b>Akun Beban</b>. Langsung mempengaruhi Laba/Rugi.</li>
+            <li><b>Kondisi Aset:</b> Modul inventaris barang koperasi (Komputer, Meja, dll). Mencatat harga beli dan kondisi barang (Baik, Rusak, Hilang).</li>
+        </ul>
+    </div>
+
+    <div class="step-box ms-3">
+        <div class="step-number">5</div>
+    <!-- BAB 6: LAPORAN & AKUNTANSI OTOMATIS -->
+    <h4 class="fw-bold text-primary mb-3 border-bottom pb-2"><i class="fa-solid fa-book-journal-whills me-2"></i> BAB VI : Laporan & Akuntansi Otomatis</h4>
+    <div class="mb-4">
+        <div class="alert alert-info border-0 shadow-sm mb-4">
+            <i class="fa-solid fa-circle-info me-2"></i> Software ini dilengkapi fitur <b>Auto-Jurnal</b>. Semua transaksi di atas otomatis membentuk jurnal akuntansi.
+        </div>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6 class="fw-bold text-dark"><i class="fa-solid fa-chart-line text-primary me-2"></i> Laba / Rugi</h6>
+                    <p class="small text-muted mb-0">Membandingkan seluruh pendapatan margin & denda dengan pengeluaran beban (pajak, listrik, gaji pegawai).</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6 class="fw-bold text-dark"><i class="fa-solid fa-scale-balanced text-primary me-2"></i> Neraca Keuangan</h6>
+                    <p class="small text-muted mb-0">Menyeimbangkan kolom AKTIVA (Kas, Piutang) dengan PASIVA (Kewajiban Titipan Jamsostek, Ekuitas/Modal Koperasi, & Laba Berjalan).</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6 class="fw-bold text-dark"><i class="fa-solid fa-file-invoice text-primary me-2"></i> Laporan Harian</h6>
+                    <p class="small text-muted mb-0">Rekapitulasi pencairan, setoran, arus kas, dan tindak lanjut penanganan marketing untuk anggota macet <b>per tanggal</b>.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-card">
+                    <h6 class="fw-bold text-dark"><i class="fa-solid fa-bullseye text-primary me-2"></i> Realisasi Anggaran (RAB)</h6>
+                    <p class="small text-muted mb-0">Manajer dapat membuat plafon limit biaya bulanan. Jika pengeluaran operasional mendekati limit, grafik akan berubah kuning/merah (Overbudget).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BAB 7: PUSAT CETAK BERKAS -->
+    <h4 class="fw-bold text-primary mt-5 mb-3 border-bottom pb-2"><i class="fa-solid fa-print me-2"></i> BAB VII : Pusat Cetak Berkas</h4>
+    <p class="text-muted small">Fitur *paperless* yang memungkinkan Anda mencetak dokumen digital berformat PDF, siap di-print atau di-download.</p>
+    <ul class="text-muted small">
+        <li><b>Akad Pinjaman & Pernyataan:</b> Surat perjanjian hukum yang berisi rincian angsuran, denda, dan tanda tangan digital. Dibuat setelah pencairan.</li>
+        <li><b>Cetak Struk Angsuran:</b> Slip bukti pelunasan dan cicilan (mendukung printer kecil/thermal maupun kertas HVS).</li>
+        <li><b>Bukti Setoran / Penarikan:</b> Resi bukti transaksi simpanan tabungan.</li>
+        <li><b>Rekening Koran (All-in-One):</b> Melalui menu Data Anggota (tombol Lihat Detail), Anda bisa mencetak mutasi seluruh sejarah keuangan anggota dalam satu laporan lengkap.</li>
+    </ul>
+
+    <!-- BAB 8: KEAMANAN & APPROVAL -->
+    <h4 class="fw-bold text-primary mt-5 mb-3 border-bottom pb-2"><i class="fa-solid fa-shield-halved me-2"></i> BAB VIII : Sistem Keamanan & Approval</h4>
+    <div class="step-box ms-3">
+        <div class="step-number">9</div>
+        <h5 class="fw-bold text-dark">Sistem Hierarki & Approval Manager</h5>
+        <p class="text-muted small mb-2">Aplikasi ini memisahkan hak akses antara <b>Admin/Kasir</b> dengan <b>Manager/Super Admin</b>.</p>
+        <ul class="text-muted small">
+            <li>Jika Kasir menginput: Pencairan Pinjaman, Pengeluaran Operasional, Penarikan Uang, atau Pembatalan Transaksi, data tersebut <b>tidak langsung diproses</b>.</li>
+            <li>Data masuk ke keranjang antrean (Queue) di menu <b>Approval Transaksi</b>.</li>
+            <li>Hanya Manager yang bisa membuka menu tersebut untuk melihat rincian datanya, lalu mengklik <b>Setujui</b> atau <b>Tolak</b>.</li>
+            <li><b>Audit Logs:</b> Semua aktivitas (Login, hapus data, ubah data) akan direkam diam-diam oleh sistem di menu Audit Logs untuk menghindari kecurangan (*Fraud*).</li>
+        </ul>
+    </div>
+
+    <!-- FOOTER BOOKLET -->
+    <div class="text-center mt-5 pt-4 border-top border-2 border-secondary mb-4">
+        <i class="fa-solid fa-building-columns fa-2x text-primary mb-2"></i>
+        <h5 class="fw-bold text-dark mb-1">Koperasi Simpan Pinjam Gabe Artha Nauli</h5>
+        <p class="small text-muted mb-0">
+            Jl. Raya Pasar Kemis - Rajeg. Kp. Putat RT/RW 005/001<br>
+            Ds. Sindang Panon Kec. Sindang Jaya, Tangerang, Banten.<br>
+            &copy; 2026 Hak Cipta Dilindungi. Sistem Manajemen Berbasis Web.
+        </p>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fitur bantuan otomatis jika ada logic javascript untuk panduan
+</script>
+{% endblock %}

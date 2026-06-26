@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitoring JMO/BPJS - Koperasi{% endblock %}
+{% block page_title %}Monitoring Status JMO / BPJS Anggota{% endblock %}
+
+{% block content %}
+<!-- Kartu Ringkasan Status -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-primary border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Total Anggota</div>
+                        <h3 class="fw-bold mb-0" id="summary_total_anggota">0</h3>
+                    </div>
+                    <div class="fs-1 text-primary opacity-50"><i class="fa-solid fa-users"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-secondary border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Belum Ada Status</div>
+                        <h3 class="fw-bold mb-0" id="summary_belum_ada_status">0</h3>
+                    </div>
+                    <div class="fs-1 text-secondary opacity-50"><i class="fa-solid fa-question-circle"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-success border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Aktif</div>
+                        <h3 class="fw-bold mb-0" id="summary_aktif">0</h3>
+                    </div>
+                    <div class="fs-1 text-success opacity-50"><i class="fa-solid fa-user-check"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-danger border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Non Aktif</div>
+                        <h3 class="fw-bold mb-0" id="summary_non_aktif">0</h3>
+                    </div>
+                    <div class="fs-1 text-danger opacity-50"><i class="fa-solid fa-user-slash"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-info border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Riset</div>
+                        <h3 class="fw-bold mb-0" id="summary_riset">0</h3>
+                    </div>
+                    <div class="fs-1 text-info opacity-50"><i class="fa-solid fa-magnifying-glass"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-dark border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Sudah Cair</div>
+                        <h3 class="fw-bold mb-0" id="summary_sudah_cair">0</h3>
+                    </div>
+                    <div class="fs-1 text-dark opacity-50"><i class="fa-solid fa-sack-dollar"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-primary border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Link</div>
+                        <h3 class="fw-bold mb-0" id="summary_link">0</h3>
+                    </div>
+                    <div class="fs-1 text-primary opacity-50"><i class="fa-solid fa-link"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-secondary border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">Lunas</div>
+                        <h3 class="fw-bold mb-0" id="summary_lunas">0</h3>
+                    </div>
+                    <div class="fs-1 text-secondary opacity-50"><i class="fa-solid fa-handshake"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-start border-warning border-4 h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <div class="text-muted text-uppercase small">BPU</div>
+                        <h3 class="fw-bold mb-0" id="summary_bpu">0</h3>
+                    </div>
+                    <div class="fs-1 text-warning opacity-50"><i class="fa-solid fa-user-shield"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<!-- Tabel Utama -->
+<div class="card shadow border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fa-solid fa-table-list me-2"></i>Daftar Status JMO Anggota</h5>
+        <button class="btn btn-sm btn-outline-primary" id="btnRefreshData"><i class="fa-solid fa-sync-alt me-1"></i> Segarkan Data</button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table id="tableJMO" class="table table-striped table-hover" style="width:100%">
+                <thead class="table-light">
+                    <tr>
+                        <th>No. Anggota</th>
+                        <th>Nama Anggota</th>
+                        <th>Cabang</th>
+                        <th>NIK KTP</th>
+                        <th>Alamat Tagih</th>
+                        <th>Email</th>
+                        <th>Status JMO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Pustaka DataTables & SweetAlert2 -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Opsi status yang akan muncul di dropdown
+    const statusOptions = ['Aktif', 'Non Aktif', 'Riset', 'Sudah Cair', 'Link', 'Lunas', 'Tidak Ada JMO', 'BPU'];
+
+    // Fungsi untuk membuat dropdown status
+    function createStatusDropdown(currentStatus, noAnggota) {
+        let optionsHtml = statusOptions.map(status => {
+            const selected = (status === currentStatus) ? 'selected' : '';
+            return `<option value="${status}" ${selected}>${status}</option>`;
+        }).join('');
+
+        return `
+            <select class="form-select form-select-sm status-jmo-select" data-no-anggota="${noAnggota}" data-original-status="${currentStatus || ''}">
+                <option value="">-- Pilih Status --</option>
+                ${optionsHtml}
+            </select>
+        `;
+    }
+
+    // Fungsi utama untuk memuat dan menampilkan data
+    function loadData() {
+        const table = $('#tableJMO').DataTable();
+        table.clear().draw();
+        // Workaround untuk error "table.processing is not a function".
+        // Secara manual menampilkan indikator loading yang dibuat oleh DataTables.
+        // Opsi 'processing: true' pada inisialisasi harus tetap ada.
+        $('#tableJMO_processing').show();
+
+        fetch('/api/monitoring_jmo')
+            .then(response => {
+                if (!response.ok) throw new Error('Gagal memuat data dari server.');
+                return response.json();
+            })
+            .then(result => {
+                if (result.status !== 'success') throw new Error(result.message);
+
+                // 1. Update Kartu Ringkasan
+                const summary = result.summary || {};
+                document.getElementById('summary_total_anggota').innerText = summary['total_anggota'] || 0;
+                document.getElementById('summary_belum_ada_status').innerText = summary['belum_ada_status'] || 0;
+                document.getElementById('summary_aktif').innerText = summary['Aktif'] || 0;
+                document.getElementById('summary_non_aktif').innerText = summary['Non Aktif'] || 0;
+                document.getElementById('summary_riset').innerText = summary['Riset'] || 0;
+                document.getElementById('summary_sudah_cair').innerText = summary['Sudah Cair'] || 0;
+                document.getElementById('summary_link').innerText = summary['Link'] || 0;
+                document.getElementById('summary_lunas').innerText = summary['Lunas'] || 0;
+                document.getElementById('summary_bpu').innerText = summary['BPU'] || 0;
+
+                // 2. Isi Tabel
+                result.data.forEach(row => {
+                    table.row.add([
+                        row.no_anggota,
+                        row.nama_anggota,
+                        row.cabang || 'GAS',
+                        row.nik_ktp || '-',
+                        row.alamat_tagih || '-',
+                        row.email || '-',
+                        createStatusDropdown(row.status_jmo, row.no_anggota)
+                    ]).draw(false);
+                });
+            })
+            .catch(error => {
+                Swal.fire('Error!', error.message, 'error');
+            })
+            .finally(() => {
+                $('#tableJMO_processing').hide();
+            });
+    }
+
+    // Fungsi untuk menangani perubahan status
+    function handleStatusChange(selectElement) {
+        const noAnggota = selectElement.dataset.noAnggota;
+        const newStatus = selectElement.value;
+        const originalStatus = selectElement.dataset.originalStatus;
+
+        if (newStatus === originalStatus) return; // Tidak ada perubahan
+
+        Swal.fire({
+            title: 'Konfirmasi Perubahan Status',
+            html: `Anda yakin ingin mengubah status JMO untuk anggota <strong>${noAnggota}</strong> dari "<i>${originalStatus || 'Kosong'}</i>" menjadi "<strong>${newStatus}</strong>"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Ya, Ubah Status!',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Kirim data ke API
+                fetch('/api/update_jmo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        no_anggota: noAnggota,
+                        status_jmo: newStatus
+                    })
+                })
+                .then(response => response.json())
+                .then(apiResult => {
+                    if (apiResult.status === 'success') {
+                        Swal.fire('Berhasil!', apiResult.message, 'success');
+                        // Update status original di dropdown agar tidak memicu konfirmasi lagi
+                        selectElement.dataset.originalStatus = newStatus;
+                        // Animasikan baris yang diubah
+                        $(selectElement).closest('tr').addClass('table-success').delay(2000).queue(function(next){
+                            $(this).removeClass('table-success');
+                            next();
+                        });
+                        // Segarkan data ringkasan
+                        loadData();
+                    } else {
+                        throw new Error(apiResult.message);
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('Gagal!', `Terjadi kesalahan: ${error.message}`, 'error');
+                    // Kembalikan dropdown ke status semula jika gagal
+                    selectElement.value = originalStatus;
+                });
+            } else {
+                // Jika dibatalkan, kembalikan dropdown ke status semula
+                selectElement.value = originalStatus;
+            }
+        });
+    }
+
+    // Inisialisasi saat dokumen siap
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inisialisasi DataTable
+        $('#tableJMO').DataTable({
+            language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json' },
+            processing: true,
+            serverSide: false // Data dimuat dari client-side fetch
+        });
+
+        // Muat data pertama kali
+        loadData();
+
+        // Event listener untuk tombol refresh
+        document.getElementById('btnRefreshData').addEventListener('click', loadData);
+
+        // Event listener untuk dropdown status (menggunakan event delegation)
+        document.querySelector('#tableJMO tbody').addEventListener('change', function(event) {
+            if (event.target.classList.contains('status-jmo-select')) {
+                handleStatusChange(event.target);
+            }
+        });
+    });
+</script>
+{% endblock %}

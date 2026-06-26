@@ -1,140 +1,171 @@
 {% extends 'base.html' %}
 
-{% block title %}Laba Rugi - Koperasi{% endblock %}
-{% block page_title %}Laporan Laba / Rugi Berjalan{% endblock %}
+{% block title %}Laporan Laba Rugi - Koperasi{% endblock %}
+{% block page_title %}Laporan Laba Rugi{% endblock %}
 
 {% block content %}
-
 <div class="card shadow border-0">
-    <div class="card-body p-4 bg-white">
-        
-        <!-- Header Laporan -->
-        <div class="text-center position-relative mb-4 border-bottom pb-3">
-            <h4 class="mb-1 fw-bold text-uppercase">PERHITUNGAN LABA RUGI CABANG</h4>
-            <h6 class="text-muted">Periode : <span id="periodeBulan" class="fw-bold"></span> (Bulan Berjalan)</h6>
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 text-primary"><i class="fa-solid fa-chart-line me-2"></i>Filter Laporan</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Tanggal Mulai</label>
+                <input type="date" id="start_date" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">Tanggal Selesai</label>
+                <input type="date" id="end_date" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <button id="btnFilter" class="btn btn-primary w-100"><i class="fa-solid fa-filter me-1"></i> Tampilkan</button>
+            </div>
+            <div class="col-md-2">
+                <a id="btnCetakPdf" href="#" target="_blank" class="btn btn-danger w-100 disabled"><i class="fa-solid fa-file-pdf me-1"></i> Cetak PDF</a>
+            </div>
+            <div class="col-md-2">
+                <a id="btnEksporExcel" href="#" class="btn btn-success w-100 disabled"><i class="fa-solid fa-file-excel me-1"></i> Ekspor Excel</a>
+            </div>
         </div>
-
+    </div>
+    <div class="card-body border-top" id="report-container">
+        <div class="text-center text-muted p-5">
+            <i class="fa-solid fa-calendar-days fa-3x mb-3"></i>
+            <h5 class="fw-light">Pilih periode tanggal dan klik "Tampilkan" untuk memuat laporan.</h5>
+        </div>
+    </div>
+    <div class="card-footer text-end" id="summary-footer" style="display: none;">
         <div class="row">
-            <!-- Kiri: Aktiva / Pendapatan -->
-            <div class="col-md-6 border-end pe-md-4">
-                <table class="table table-borderless table-sm mb-0">
-                    <thead>
-                        <tr class="border-bottom border-dark border-2">
-                            <th class="fw-bold text-uppercase">Aktiva (Pendapatan)</th>
-                            <th class="text-end fw-bold text-uppercase">Jumlah</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablePendapatan">
-                        <!-- Injeksi JS -->
-                    </tbody>
-                    <tfoot>
-                        <tr class="border-top border-dark border-2">
-                            <td class="fw-bold fs-6">Total Pendapatan</td>
-                            <td class="text-end fw-bold fs-6 text-success" id="totPendapatan">Rp 0.00</td>
-                        </tr>
-                    </tfoot>
-                </table>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-0">Total Pendapatan</h6>
+                <h4 id="summaryTotalPendapatan" class="fw-bold text-success">Rp 0</h4>
             </div>
-
-            <!-- Kanan: Pasiva / Biaya -->
-            <div class="col-md-6 ps-md-4 mt-4 mt-md-0">
-                <table class="table table-borderless table-sm mb-0">
-                    <thead>
-                        <tr class="border-bottom border-dark border-2">
-                            <th class="fw-bold text-uppercase">Pasiva (Biaya)</th>
-                            <th class="text-end fw-bold text-uppercase">Jumlah</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBeban">
-                        <!-- Injeksi JS -->
-                    </tbody>
-                    <tfoot>
-                        <tr class="border-top border-dark border-2">
-                            <td class="fw-bold fs-6">Total Biaya</td>
-                            <td class="text-end fw-bold fs-6 text-danger" id="totBeban">Rp 0.00</td>
-                        </tr>
-                    </tfoot>
-                </table>
-
-                <!-- Rekap Laba/Rugi -->
-                <div class="mt-4 pt-3 border-top border-1">
-                    <table class="table table-borderless table-sm mb-0">
-                        <tr>
-                            <td class="fw-bold text-muted">Laba sebelum Pajak</td>
-                            <td class="text-end fw-bold" id="labaSebelum">Rp 0.00</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold text-muted">Pajak</td>
-                            <td class="text-end fw-bold text-muted">Rp 0.00</td>
-                        </tr>
-                        <tr class="border-top border-dark border-2">
-                            <td class="fw-bold fs-5 text-primary">Laba setelah Pajak</td>
-                            <td class="text-end fw-bold fs-5 text-primary" id="labaSetelah">Rp 0.00</td>
-                        </tr>
-                    </table>
-                </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-0">Total Beban</h6>
+                <h4 id="summaryTotalBeban" class="fw-bold text-danger">Rp 0</h4>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-muted mb-0">Laba / Rugi Bersih</h6>
+                <h4 id="summaryLabaBersih" class="fw-bold text-primary">Rp 0</h4>
             </div>
         </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Fungsi format Rupiah dengan desimal (seperti format akuntansi .00)
     function formatRp(angka) {
-        let isNegative = angka < 0;
-        let val = Math.abs(angka);
-        // Menggunakan en-US agar menghasilkan koma di ribuan dan titik di desimal sesuai format contoh Anda
-        let formatted = val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return (isNegative ? '-Rp ' : 'Rp ') + formatted;
+        const number = Number(angka) || 0;
+        const isNegative = number < 0;
+        const formatted = Math.abs(number).toLocaleString('id-ID');
+        return isNegative ? `- Rp ${formatted}` : `Rp ${formatted}`;
+    }
+
+    function buildTable(title, data, containerId) {
+        let tableHtml = `
+            <h5 class="fw-bold mb-3">${title}</h5>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center" style="width: 15%;">Kode Akun</th>
+                            <th>Nama Akun</th>
+                            <th class="text-end" style="width: 20%;">Saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        if (data.length === 0) {
+            tableHtml += '<tr><td colspan="3" class="text-center text-muted">Tidak ada data.</td></tr>';
+        } else {
+            data.forEach(item => {
+                tableHtml += `
+                    <tr>
+                        <td class="text-center">${item.account_code}</td>
+                        <td>${item.account_name}</td>
+                        <td class="text-end">${formatRp(item.saldo)}</td>
+                    </tr>`;
+            });
+        }
+        
+        tableHtml += `</tbody></table></div>`;
+        return tableHtml;
+    }
+
+    function fetchLabaRugi() {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        const btnFilter = document.getElementById('btnFilter');
+        const reportContainer = document.getElementById('report-container');
+        const summaryFooter = document.getElementById('summary-footer');
+        const btnPdf = document.getElementById('btnCetakPdf');
+        const btnExcel = document.getElementById('btnEksporExcel');
+
+        let url = '/api/laba_rugi?';
+        let exportUrlParams = '';
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        
+        url += params.toString();
+        exportUrlParams = params.toString();
+
+        btnFilter.disabled = true;
+        btnFilter.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Memuat...';
+        reportContainer.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        summaryFooter.style.display = 'none';
+        btnPdf.classList.add('disabled');
+        btnExcel.classList.add('disabled');
+
+        fetch(url)
+            .then(res => res.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    const data = result.data;
+                    let contentHtml = '<div class="row g-4">';
+                    contentHtml += '<div class="col-lg-6">' + buildTable('Pendapatan', data.pendapatan) + '</div>';
+                    contentHtml += '<div class="col-lg-6">' + buildTable('Beban Operasional', data.beban) + '</div>';
+                    contentHtml += '</div>';
+                    reportContainer.innerHTML = contentHtml;
+
+                    document.getElementById('summaryTotalPendapatan').innerText = formatRp(data.total_pendapatan);
+                    document.getElementById('summaryTotalBeban').innerText = formatRp(data.total_beban);
+                    const labaBersihEl = document.getElementById('summaryLabaBersih');
+                    labaBersihEl.innerText = formatRp(data.laba_bersih);
+                    labaBersihEl.className = data.laba_bersih >= 0 ? 'fw-bold text-primary' : 'fw-bold text-danger';
+                    
+                    summaryFooter.style.display = 'block';
+                    btnPdf.classList.remove('disabled');
+                    btnExcel.classList.remove('disabled');
+                    btnPdf.href = `/api/cetak_laba_rugi_pdf?${exportUrlParams}`;
+                    btnExcel.href = `/api/export_laba_rugi_excel?${exportUrlParams}`;
+                } else {
+                    reportContainer.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            })
+            .catch(err => {
+                reportContainer.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${err}</div>`;
+            })
+            .finally(() => {
+                btnFilter.disabled = false;
+                btnFilter.innerHTML = '<i class="fa-solid fa-filter me-1"></i> Tampilkan';
+            });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Mengisi Periode Bulan Berjalan Otomatis
-        const namaBulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        const date = new Date();
-        document.getElementById('periodeBulan').innerText = `${namaBulan[date.getMonth()]} ${date.getFullYear()}`;
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const todayStr = today.toISOString().split('T')[0];
 
-        fetch('/api/laba_rugi')
-        .then(response => response.json())
-        .then(res => {
-            if(res.status === 'success') {
-                let tbodyP = document.getElementById('tablePendapatan');
-                let tbodyB = document.getElementById('tableBeban');
-                
-                // Loop Pendapatan
-                res.data.pendapatan.forEach(item => {
-                    tbodyP.innerHTML += `<tr>
-                        <td class="ps-3">${item.account_name}</td>
-                        <td class="text-end">${formatRp(item.saldo)}</td>
-                    </tr>`;
-                });
-                
-                // Loop Biaya/Beban
-                res.data.beban.forEach(item => {
-                    tbodyB.innerHTML += `<tr>
-                        <td class="ps-3">${item.account_name}</td>
-                        <td class="text-end">${formatRp(item.saldo)}</td>
-                    </tr>`;
-                });
-                
-                // Set Total Pendapatan & Biaya
-                document.getElementById('totPendapatan').innerText = formatRp(res.data.total_pendapatan);
-                document.getElementById('totBeban').innerText = formatRp(res.data.total_beban);
+        document.getElementById('start_date').value = firstDayOfMonth;
+        document.getElementById('end_date').value = todayStr;
 
-                // Set Laba Bersih
-                let laba = res.data.laba_bersih;
-                document.getElementById('labaSebelum').innerText = formatRp(laba);
-                
-                // Pajak saat ini di-hardcode ke 0, Laba Setelah = Laba Sebelum
-                document.getElementById('labaSetelah').innerText = formatRp(laba);
-                
-                // Mengubah warna teks menjadi merah jika rugi (mines)
-                if(laba < 0) {
-                    document.getElementById('labaSetelah').classList.replace('text-primary', 'text-danger');
-                }
-            }
-        });
+        document.getElementById('btnFilter').addEventListener('click', fetchLabaRugi);
+        
+        // Auto-load on page open
+        fetchLabaRugi();
     });
 </script>
 {% endblock %}

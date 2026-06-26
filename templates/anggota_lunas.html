@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar Anggota Lunas - Koperasi{% endblock %}
+{% block page_title %}Daftar Anggota Lunas (Tanpa Tunggakan){% endblock %}
+
+{% block content %}
+<div class="card shadow border-0 mb-4">
+    <div class="card-header bg-white pt-3 pb-2 d-flex justify-content-between align-items-center flex-wrap">
+        <h5 class="mb-0 text-success fw-bold"><i class="fa-solid fa-user-check me-2"></i> Data Anggota Lunas Pinjaman</h5>
+        <div class="d-flex mt-2 mt-md-0">
+            <div class="input-group input-group-sm shadow-sm" style="width: 280px;">
+                <span class="input-group-text bg-light"><i class="fa-solid fa-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control" placeholder="Cari nama atau no anggota...">
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body p-0 bg-light">
+        <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+            <table class="table table-hover table-striped align-middle mb-0 text-sm">
+                <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                    <tr>
+                        <th class="ps-3 text-center" width="5%">No</th>
+                        <th width="15%">No Anggota</th>
+                        <th>Nama Anggota</th>
+                        <th>Instansi / PT</th>
+                        <th>No Telepon</th>
+                        <th class="text-center" width="15%">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tableAnggotaLunas">
+                    <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i> Memuat data anggota lunas...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetch('/api/anggota_lunas')
+        .then(res => res.json())
+        .then(res => {
+            const tbody = document.getElementById('tableAnggotaLunas');
+            tbody.innerHTML = '';
+            
+            if(res.status === 'success' && res.data.length > 0) {
+                res.data.forEach((row, i) => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="ps-3 text-center">${i + 1}</td>
+                            <td><span class="badge bg-secondary">${row.no_anggota}</span></td>
+                            <td class="fw-bold">${row.nama_anggota}</td>
+                            <td>${row.pt_instansi || '-'}</td>
+                            <td>${row.no_telp || '-'}</td>
+                            <td class="text-center">
+                                <a href="/api/cetak_rekening_koran/${row.no_anggota}" target="_blank" class="btn btn-sm btn-danger shadow-sm fw-bold">
+                                    <i class="fa-solid fa-file-pdf me-1"></i> Cetak Rekening
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Belum ada data anggota yang lunas (bebas dari tagihan aktif).</td></tr>';
+            }
+        }).catch(err => {
+            document.getElementById('tableAnggotaLunas').innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Gagal memuat data dari server.</td></tr>';
+        });
+
+        // Fitur Pencarian Cepat
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            let filter = this.value.toLowerCase();
+            document.querySelectorAll('#tableAnggotaLunas tr').forEach(row => {
+                row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
+            });
+        });
+    });
+</script>
+{% endblock %}

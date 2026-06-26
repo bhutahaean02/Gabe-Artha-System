@@ -139,7 +139,16 @@
                     <a href="/identitas" class="nav-link {% if request.path == '/identitas' %}active{% endif %}"><i class="fa-solid fa-users me-2 w-20px"></i> Data Anggota</a>
                 </li>
                 <li>
+                    <a href="/anggota_lunas" class="nav-link {% if request.path == '/anggota_lunas' %}active{% endif %}"><i class="fa-solid fa-user-check me-2 w-20px"></i> Anggota Lunas</a>
+                </li>
+                <li>
                     <a href="/monitoring_pinjaman" class="nav-link {% if request.path == '/monitoring_pinjaman' %}active{% endif %}"><i class="fa-solid fa-display me-2 w-20px"></i> Monitoring Pinjaman</a>
+                </li>
+                <li>
+                    <a href="/monitoring_jmo" class="nav-link {% if request.path == '/monitoring_jmo' %}active{% endif %}"><i class="fa-solid fa-shield-heart me-2 w-20px"></i> Monitoring JMO</a>
+                </li>
+                <li>
+                    <a href="/monitoring_lokasi" class="nav-link {% if request.path == '/monitoring_lokasi' %}active{% endif %}"><i class="fa-solid fa-map-location-dot me-2 w-20px"></i> Lokasi Anggota</a>
                 </li>
                 <li class="mt-3 mb-1 small text-uppercase text-white-50 fw-bold px-3">Transaksi</li>
                 <li>
@@ -190,9 +199,16 @@
                 <li>
                     <a href="/cetak_berkas" class="nav-link {% if request.path == '/cetak_berkas' %}active{% endif %}"><i class="fa-solid fa-print me-2 w-20px"></i> Pusat Cetak Berkas</a>
                 </li>
+                <li>
+                    <a href="/convert_pdf" class="nav-link {% if request.path == '/convert_pdf' %}active{% endif %}"><i class="fa-solid fa-file-pdf me-2 w-20px"></i> Convert PDF</a>
+                </li>
                 <li class="mt-3 mb-1 small text-uppercase text-white-50 fw-bold px-3">Sistem & Keamanan</li>
                 <li>
                     <a href="/audit_logs" class="nav-link {% if request.path == '/audit_logs' %}active{% endif %}"><i class="fa-solid fa-shield-halved me-2 w-20px"></i> Audit Logs</a>
+                </li>
+                <li class="mt-3 mb-1 small text-uppercase text-white-50 fw-bold px-3">Bantuan & Panduan</li>
+                <li>
+                    <a href="/panduan" class="nav-link {% if request.path == '/panduan' %}active{% endif %}"><i class="fa-solid fa-book-open-reader me-2 w-20px text-warning"></i> Booklet Penggunaan</a>
                 </li>
                 {% endif %}
                 {% if session.get('role') == 'Anggota' %}

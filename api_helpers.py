@@ -1,6 +1,9 @@
 from datetime import datetime
 import calendar
 from flask import session
+import requests
+import re
+from bs4 import BeautifulSoup
 
 # === FUNGSI BANTUAN UNTUK MENAMBAH BULAN ===
 def tambah_bulan(tanggal_awal, tambah_bulan):
@@ -16,8 +19,17 @@ def parse_float(value, field_name):
         return 0.0
     try:
         if isinstance(value, str):
-            value = value.replace('.', '')
-            value = value.replace(',', '.')
+            # If a comma is present, it's the decimal separator. '.' are thousand separators. (e.g., "1.500,50")
+            if ',' in value:
+                value = value.replace('.', '').replace(',', '.')
+            # If no comma, but multiple dots, they are all thousand separators. (e.g., "1.500.000")
+            elif value.count('.') > 1:
+                value = value.replace('.', '')
+            # If no comma and only one dot, it's ambiguous. "1.000" vs "2.5".
+            # Heuristic: if there are 3 digits after the dot, it's a thousand separator.
+            elif value.count('.') == 1:
+                if len(value.split('.')[1]) == 3:
+                    value = value.replace('.', '')
         return float(value)
     except (ValueError, TypeError):
         raise ValueError(f"Input pada '{field_name}' harus berupa angka yang valid.")
@@ -93,33 +105,148 @@ def terbilang(n):
     return bilang(n)
 
 # === FUNGSI BANTUAN UNTUK KALKULASI DENDA KETERLAMBATAN ===
-def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda_db, angsuran_denda, denda_aktif=True, jenis_pinjaman='Multiguna'):
+def hitung_denda_keterlambatan(jatuh_tempo, tgl_bayar, tagihan_pokok, tagihan_margin, angsuran_pokok, angsuran_margin, tagihan_denda_db, angsuran_denda, denda_aktif=True, jenis_pinjaman='Multiguna', tgl_referensi=None):
     if not jatuh_tempo or not denda_aktif:
-        return 0, 0.0
+        return 0.0, 0
         
-    today = datetime.now().date()
+    ref_date = tgl_referensi if tgl_referensi else datetime.now().date()
     
     # Konversi string ke date
-    if isinstance(jatuh_tempo, str):
-        jatuh_tempo = datetime.strptime(jatuh_tempo[:10], '%Y-%m-%d').date()
-    if isinstance(tgl_bayar, str) and tgl_bayar:
-        tgl_bayar = datetime.strptime(tgl_bayar[:10], '%Y-%m-%d').date()
+    try:
+        if isinstance(jatuh_tempo, str): jatuh_tempo = datetime.strptime(jatuh_tempo[:10], '%Y-%m-%d').date()
+        elif hasattr(jatuh_tempo, 'date'): jatuh_tempo = jatuh_tempo.date()
+        if isinstance(tgl_bayar, str) and tgl_bayar: tgl_bayar = datetime.strptime(tgl_bayar[:10], '%Y-%m-%d').date()
+        elif hasattr(tgl_bayar, 'date'): tgl_bayar = tgl_bayar.date()
+    except (ValueError, TypeError):
+        return 0.0, 0 # Return 0 if dates are invalid
         
     base_date = jatuh_tempo
-    if tgl_bayar and tgl_bayar > jatuh_tempo:
-        base_date = tgl_bayar
+    if tgl_bayar and tgl_bayar > jatuh_tempo: base_date = tgl_bayar
         
-    od_hari = max((today - base_date).days, 0)
+    od_hari = max((ref_date - base_date).days, 0)
     
     sisa_p = float(tagihan_pokok or 0) - float(angsuran_pokok or 0)
     sisa_m = float(tagihan_margin or 0) - float(angsuran_margin or 0)
     
-    if sisa_p <= 0.01 and sisa_m <= 0.01:
-        d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0)
-    else:
-        if jenis_pinjaman in ['Tempo', 'Gaji', 'THR']:
-            d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.007 * od_hari)
-        else:
-            d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0) + ((sisa_p + sisa_m) * 0.005 * od_hari)
+    d_kalk = float(tagihan_denda_db or 0) - float(angsuran_denda or 0)
+    
+    if sisa_p > 0.01 or sisa_m > 0.01:
+        jp_lower = str(jenis_pinjaman).lower()
+        rate = 0.007 if jp_lower == 'tempo' or 'urgent' in jp_lower else 0.005
+        d_kalk += (sisa_p + sisa_m) * rate * od_hari
         
-    return od_hari, max(0, d_kalk)
+    return max(0, d_kalk), od_hari
+
+# === FUNGSI BANTUAN BARU UNTUK EKSTRAKSI KOORDINAT GOOGLE MAPS ===
+def extract_gmaps_coordinates(url):
+    """
+    Mengekstrak koordinat Latitude dan Longitude dari berbagai format URL Google Maps
+    dengan mekanisme fallback untuk akurasi terbaik.
+
+    Alur kerja:
+    1. Resolve Redirect: Mengikuti short link (misal, goo.gl) ke URL panjangnya.
+    2. Prioritas 1 (Pinpoint): Mencari parameter !3d (lat) dan !4d (lon) di URL.
+    3. Prioritas 2 (Approximate): Mencari meta tag 'og:image' di HTML dan mengekstrak
+       koordinat dari parameter 'center' di URL gambar statis.
+    4. Prioritas 3 (Viewport): Mencari pola @lat,lng di URL sebagai fallback terakhir.
+
+    :param url: String URL Google Maps (bisa pendek atau panjang).
+    :return: Dictionary berisi status, lat, lng, dan tipe akurasi.
+    """
+    if not isinstance(url, str) or not ('http' in url or 'goo.gl' in url or 'maps.app' in url):
+        return {'status': 'error', 'message': 'URL tidak valid.'}
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    try:
+        # FASE 1: Resolve Redirect
+        response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
+        final_url = response.url
+
+        # FASE 2 (Prioritas 1): Cari parameter !3d dan !4d (akurasi tinggi)
+        match_3d4d = re.search(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)', final_url)
+        if match_3d4d:
+            return {'status': 'success', 'lat': float(match_3d4d.group(1)), 'lng': float(match_3d4d.group(2)), 'accuracy_type': 'pinpoint'}
+
+        # FASE 3 (Prioritas 2): Fallback ke parsing HTML untuk meta tag og:image
+        soup = BeautifulSoup(response.text, 'html.parser')
+        meta_tag = soup.find('meta', property='og:image')
+        if meta_tag and meta_tag.get('content'):
+            image_url = meta_tag['content']
+            match_center = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', image_url)
+            if match_center:
+                return {'status': 'success', 'lat': float(match_center.group(1)), 'lng': float(match_center.group(2)), 'accuracy_type': 'approximate'}
+
+        # FASE 4 (Prioritas 3): Fallback terakhir, cari pola @lat,lng
+        match_at = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', final_url)
+        if match_at:
+            return {'status': 'success', 'lat': float(match_at.group(1)), 'lng': float(match_at.group(2)), 'accuracy_type': 'viewport'}
+
+        return {'status': 'error', 'message': 'Tidak dapat menemukan format koordinat yang dikenali.'}
+
+    except requests.RequestException as e:
+        return {'status': 'error', 'message': f"Gagal mengakses URL: {e}"}
+    except (ValueError, TypeError) as e:
+        return {'status': 'error', 'message': f"Gagal memproses data: {e}"}
+
+# === FUNGSI BANTUAN BARU UNTUK EKSTRAKSI KOORDINAT GOOGLE MAPS ===
+def extract_gmaps_coordinates(url):
+    """
+    Mengekstrak koordinat Latitude dan Longitude dari berbagai format URL Google Maps
+    dengan mekanisme fallback untuk akurasi terbaik.
+
+    Alur kerja:
+    1. Resolve Redirect: Mengikuti short link (misal, goo.gl) ke URL panjangnya.
+    2. Prioritas 1 (Pinpoint): Mencari parameter !3d (lat) dan !4d (lon) di URL.
+    3. Prioritas 2 (Approximate): Mencari meta tag 'og:image' di HTML dan mengekstrak
+       koordinat dari parameter 'center' di URL gambar statis.
+    4. Prioritas 3 (Viewport): Mencari pola @lat,lng di URL sebagai fallback terakhir.
+
+    :param url: String URL Google Maps (bisa pendek atau panjang).
+    :return: Dictionary berisi status, lat, lng, dan tipe akurasi.
+    """
+    if not isinstance(url, str) or not ('http' in url or 'goo.gl' in url or 'maps.app' in url):
+        return {'status': 'error', 'message': 'URL tidak valid.'}
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    try:
+        # FASE 1: Resolve Redirect
+        response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
+        final_url = response.url
+
+        # FASE 2 (Prioritas 1): Cari parameter !3d dan !4d (akurasi tinggi)
+        match_3d4d = re.search(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)', final_url)
+        if match_3d4d:
+            return {
+                'status': 'success',
+                'lat': float(match_3d4d.group(1)),
+                'lng': float(match_3d4d.group(2)),
+                'accuracy_type': 'pinpoint'
+            }
+
+        # FASE 3 (Prioritas 2): Fallback ke parsing HTML untuk meta tag og:image
+        soup = BeautifulSoup(response.text, 'html.parser')
+        meta_tag = soup.find('meta', property='og:image')
+        if meta_tag and meta_tag.get('content'):
+            image_url = meta_tag['content']
+            # Mencari format center=lat%2Clng atau center=lat,lng
+            match_center = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', image_url)
+            if match_center:
+                return {'status': 'success', 'lat': float(match_center.group(1)), 'lng': float(match_center.group(2)), 'accuracy_type': 'approximate'}
+
+        # FASE 4 (Prioritas 3): Fallback terakhir, cari pola @lat,lng
+        match_at = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', final_url)
+        if match_at:
+            return {'status': 'success', 'lat': float(match_at.group(1)), 'lng': float(match_at.group(2)), 'accuracy_type': 'viewport'}
+
+        return {'status': 'error', 'message': 'Tidak dapat menemukan format koordinat yang dikenali.'}
+
+    except requests.RequestException as e:
+        return {'status': 'error', 'message': f"Gagal mengakses URL: {e}"}
+    except (ValueError, TypeError) as e:
+        return {'status': 'error', 'message': f"Gagal memproses data: {e}"}

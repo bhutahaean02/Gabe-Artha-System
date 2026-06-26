@@ -91,7 +91,13 @@
         'Pencairan Multiguna': '/api/pencairan_multiguna',
         'Pencairan Dana Urgent': '/api/pencairan_urgent',
         'Pembayaran Angsuran': '/api/bayar_angsuran',
-        'Penarikan Simpanan': '/api/penarikan_simpanan'
+        'Penarikan Simpanan': '/api/penarikan_simpanan',
+        'Batal Angsuran': '/api/batal_angsuran',
+        'Batal Pencairan': '/api/batal_pencairan',
+        'Pelunasan Pinjaman': '/api/pelunasan',
+        'Restrukturisasi Pinjaman': '/api/restruktur_pinjaman',
+        'Pengeluaran Operasional': '/api/expenses',
+        'Edit Data Anggota': '/api/identitas'
     };
 
     function loadQueue() {
@@ -168,7 +174,14 @@
         if(confirm('Yakin ingin menyetujui transaksi ini? Data akan segera masuk dan diproses di sistem.')) {
             let payload = JSON.parse(d.data_payload);
             payload.is_approval_execution = true; payload.approval_id = id;
-            fetch(ENDPOINTS[d.tipe_transaksi], { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).then(res => {
+            
+            let method = d.tipe_transaksi === 'Edit Data Anggota' ? 'PUT' : 'POST';
+            let endpoint = ENDPOINTS[d.tipe_transaksi];
+            if (!endpoint) {
+                alert("Sistem Error: Endpoint tidak ditemukan untuk transaksi " + d.tipe_transaksi);
+                return;
+            }
+            fetch(endpoint, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(r=>r.json()).then(res => {
                 if(res.status === 'success') { alert('Transaksi Berhasil Disetujui & Masuk Sistem Utama!'); loadQueue(); } else { alert('Gagal: ' + res.message); }
             });
         }

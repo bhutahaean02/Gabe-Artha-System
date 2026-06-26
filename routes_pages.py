@@ -1,8 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, session, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, session, flash, jsonify, send_file, send_from_directory
 from db import get_db_connection
 import re
-from werkzeug.security import check_password_hash
-import traceback
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.exceptions import HTTPException
+import os
 
 # BARIS INILAH YANG DICARI OLEH app.py (pages_bp)
 pages_bp = Blueprint('pages', __name__)
@@ -16,94 +17,6 @@ def add_cache_control(response):
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
     return response
-
-@pages_bp.app_errorhandler(Exception)
-def handle_all_exceptions(e):
-    error_msg = str(e)
-    trace = traceback.format_exc()
-    
-    # Jika error terjadi saat memanggil API di latar belakang (fetch), kembalikan JSON
-    if request.path.startswith('/api/'):
-        return jsonify({'status': 'error', 'message': error_msg, 'trace': trace}), 500
-        
-    # Jika error terjadi saat memuat Halaman HTML, tampilkan Layar Error Beranimasi
-    html_content = f"""
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terjadi Kesalahan Sistem</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <style>
-            body {{ background-color: #F5F7FA; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
-            .error-card {{ background: white; border-radius: 16px; box-shadow: 0 15px 35px rgba(220, 53, 69, 0.15); max-width: 800px; width: 90%; padding: 40px; animation: slideUp 0.5s ease; border-top: 5px solid #dc3545; }}
-            @keyframes slideUp {{ from {{ opacity: 0; transform: translateY(30px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-            .icon-container {{ font-size: 5rem; color: #dc3545; margin-bottom: 20px; animation: pulse 2s infinite; }}
-            @keyframes pulse {{ 0% {{ transform: scale(1); }} 50% {{ transform: scale(1.05); }} 100% {{ transform: scale(1); }} }}
-            .traceback-box {{ background: #212529; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.85rem; max-height: 300px; overflow-y: auto; text-align: left; margin-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        <div class="error-card text-center">
-            <div class="icon-container"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <h2 class="fw-bold text-dark">Oops! Terjadi Kesalahan Sistem</h2>
-            <p class="text-muted">Sistem mendeteksi adanya bug atau error pada server saat memuat halaman ini.</p>
-            <div class="alert alert-danger fw-bold">{error_msg}</div>
-            <button class="btn btn-outline-danger mt-3 shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#tracebackCollapse"><i class="fa-solid fa-bug me-1"></i> Lihat Detail Bug (Untuk Tim IT)</button>
-            <a href="/" class="btn btn-primary mt-3 ms-2 shadow-sm"><i class="fa-solid fa-home me-1"></i> Kembali ke Beranda</a>
-            <div class="collapse mt-3" id="tracebackCollapse">
-                <div class="traceback-box">{trace}</div>
-            </div>
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    """
-    return html_content, 500
-
-@pages_bp.before_app_request
-def check_auth():
-    # Route yang dikecualikan dari wajib login HANYA halaman Login dan file statis
-    if request.path == '/login' or request.path.startswith('/static'):
-        return
-        
-    # Cek apakah user sudah punya sesi login
-    if 'user_id' not in session:
-        # Jika request mengarah ke API, berikan response JSON Unauthorized (HTTP 401)
-        if request.path.startswith('/api/'):
-            return jsonify({"status": "error", "message": "Unauthorized: Anda harus login."}), 401
-        return redirect('/login')
-        
-    # Pembatasan Akses Berdasarkan Role (Hak Akses)
-    role = session.get('role')
-    path = request.path
-    
-    # === PENCEGAHAN CROSSED-SESSION & AKSES ILEGAL ===
-    if role == 'Anggota':
-        allowed_api = ['/api/anggota/', '/api/update_jmo', '/api/download_berkas/']
-        if path != '/dashboard_anggota' and path != '/logout':
-            if path.startswith('/api/'):
-                if not any(path.startswith(api) for api in allowed_api):
-                    return jsonify({"status": "error", "message": "Akses ditolak. Sesi Anda telah berubah menjadi Anggota."}), 403
-            else:
-                return """
-                <div style="text-align:center; margin-top:100px; font-family:sans-serif;">
-                    <h1 style="color:red;">Akses Ditolak (Sesi Menyilang)</h1>
-                    <p>Browser mendeteksi ada login <b>Anggota</b> yang sedang aktif (mungkin di Tab lain).</p>
-                    <p>Sistem mencegah Anda membuka menu Admin demi keamanan data.</p>
-                    <br>
-                    <a href='/dashboard_anggota' style="padding:10px 20px; background:#0d6efd; color:white; text-decoration:none; border-radius:5px;">Ke Dashboard Anggota</a>
-                    <br><br><br>
-                    <a href='/logout' style="color:red; text-decoration:underline;">Logout untuk mereset sesi</a>
-                </div>
-                """, 403
-    else:
-        # Jika Admin/Manager mencoba masuk ke halaman anggota
-        if path == '/dashboard_anggota':
-            flash('Anda sedang login sebagai Admin. Tidak bisa mengakses halaman anggota.', 'info')
-            return redirect('/')
 
 @pages_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -156,18 +69,14 @@ def login():
             # Cek 2: Cari di tabel Nasabah (Anggota) menggunakan No Anggota
             cursor.execute("""
                 SELECT no_anggota, nama_anggota, password, cabang FROM identitas 
-                WHERE no_anggota = %s OR email = %s
-            """, (username, username))
+                WHERE no_anggota = %s OR email = %s OR nama_anggota = %s
+            """, (username, username, username))
             anggota = cursor.fetchone()
             if anggota:
                 # Jika password ada dan berupa hash, kita cek. Bila menggunakan ID sementara saat pembuatan, bandingkan.
-                is_valid = False
+                # PERBAIKAN KEAMANAN: Menghapus fallback login menggunakan no_anggota sebagai password.
+                # Anggota harus login menggunakan password yang sudah di-hash.
                 if anggota['password'] and check_password_hash(anggota['password'], password):
-                    is_valid = True
-                elif password == anggota['no_anggota']:  # Fallback kalau belum pernah setup password
-                    is_valid = True
-                    
-                if is_valid:
                     session.update({
                         'user_id': anggota['no_anggota'], 
                         'username': anggota['nama_anggota'], 
@@ -258,6 +167,15 @@ def laporan_tunggakan_multiguna():
 def laporan_tunggakan_urgent():
     return render_template('laporan_tunggakan_urgent.html')
 
+# TAMBAHKAN KODE INI UNTUK HALAMAN MONITORING JMO/BPJS
+@pages_bp.route('/monitoring_jmo')
+def monitoring_jmo():
+    return render_template('monitoring_jmo.html')
+
+@pages_bp.route('/monitoring_lokasi')
+def monitoring_lokasi():
+    return render_template('monitoring_lokasi.html')
+
 @pages_bp.route('/arus_kas')
 def arus_kas():
     return render_template('arus_kas.html')
@@ -285,3 +203,22 @@ def dashboard_anggota():
 @pages_bp.route('/alldata')
 def alldata():
     return render_template('alldata.html')
+
+@pages_bp.route('/anggota_lunas')
+def anggota_lunas():
+    return render_template('anggota_lunas.html')
+
+@pages_bp.route('/panduan')
+def panduan():
+    return render_template('panduan.html')
+
+@pages_bp.route('/convert_pdf')
+def convert_pdf():
+    return render_template('convert_pdf.html')
+
+@pages_bp.route('/js/<path:filename>')
+def serve_js_from_root(filename):
+    """Menyajikan file JS dari direktori root proyek."""
+    # Direktori root proyek adalah folder 'GAS', tempat file ini berada.
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    return send_from_directory(project_root, filename)

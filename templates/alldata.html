@@ -187,7 +187,14 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">KOL</label>
-                            <input type="text" name="kol" class="form-control form-control-sm">
+                            <select name="kol" class="form-select form-select-sm">
+                                <option value="">-- Pilih KOL --</option>
+                                <option value="Lancar">Lancar</option>
+                                <option value="Dalam Perhatian Khusus">Dalam Perhatian Khusus</option>
+                                <option value="Kurang Lancar">Kurang Lancar</option>
+                                <option value="Diragukan">Diragukan</option>
+                                <option value="Macet">Macet</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Kriteria</label>
@@ -304,6 +311,7 @@
                         <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#tab-histori" type="button">Histori Transaksi</button></li>
                     </ul>
                     <a href="#" id="btnCetakRekeningKoran" target="_blank" class="btn btn-danger btn-sm shadow-sm fw-bold"><i class="fa-solid fa-file-pdf me-1"></i> Cetak Rekening Koran</a>
+                    <a href="#" id="btnCetakSetoranBerkas" target="_blank" class="btn btn-success btn-sm shadow-sm fw-bold ms-1"><i class="fa-solid fa-print me-1"></i> Cetak Bukti Setoran Berkas</a>
                 </div>
                 
                 <div class="tab-content bg-white p-3 border rounded shadow-sm">
@@ -490,13 +498,42 @@
                         <div class="col-md-4"><label class="form-label small fw-bold">No Telp Penanggung Jawab</label><input type="text" name="no_telp_penanggung_jawab" class="form-control form-control-sm"></div>
                         <div class="col-md-4"><label class="form-label small fw-bold">Bank Penanggung Jawab</label><input type="text" name="bank_penanggung_jawab" class="form-control form-control-sm"></div>
                         <div class="col-md-4"><label class="form-label small fw-bold">No Rek Penanggung Jawab</label><input type="text" name="no_rek_penanggung_jawab" class="form-control form-control-sm"></div>
-                        <div class="col-md-4"><label class="form-label small fw-bold">KOL</label><input type="text" name="kol" class="form-control form-control-sm"></div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">KOL</label>
+                            <select name="kol" class="form-select form-select-sm">
+                                <option value="">-- Pilih KOL --</option>
+                                <option value="Lancar">Lancar</option>
+                                <option value="Dalam Perhatian Khusus">Dalam Perhatian Khusus</option>
+                                <option value="Kurang Lancar">Kurang Lancar</option>
+                                <option value="Diragukan">Diragukan</option>
+                                <option value="Macet">Macet</option>
+                            </select>
+                        </div>
                         <div class="col-md-4"><label class="form-label small fw-bold">Kriteria</label><input type="text" name="kriteria" class="form-control form-control-sm"></div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold">Marketing (PIC Koperasi)</label>
                             <input type="text" name="marketing" class="form-control form-control-sm" placeholder="Nama Marketing...">
                         </div>
                     </div>
+
+                    <h6 class="text-secondary border-bottom pb-2 mb-3 mt-4">Checklist Berkas Jaminan (Setoran Berkas)</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th width="5%">Ada</th>
+                                    <th width="35%">Nama Jaminan</th>
+                                    <th width="20%">Asli / Fotocopy</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyEditBerkasJaminan">
+                                <!-- Generated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <input type="hidden" name="berkas_jaminan" id="inputEditBerkasJaminan">
+
                     <div class="row g-3"><div class="col-md-12"><label class="form-label small fw-bold">Ganti Berkas PDF (Opsional)</label><input type="file" name="berkas_pdf" id="editBerkasPdf" accept="application/pdf" class="form-control form-control-sm border-warning"><small class="text-muted">Kosongkan jika tidak ingin mengubah berkas yang sudah ada.</small></div></div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -550,17 +587,21 @@
 
                 <h6 class="text-success mt-2 border-bottom pb-2 fw-bold"><i class="fa-solid fa-cash-register me-2"></i>Input Nominal Pembayaran Kasir</h6>
                 <div class="row g-3 mb-2">
-                    <div class="col-4">
+                    <div class="col-md-3 col-6">
                         <label class="small fw-bold">Bayar Pokok (Rp)</label>
                         <input type="text" id="inputSisaPokok" class="form-control fw-bold text-primary" required>
                     </div>
-                    <div class="col-4">
+                    <div class="col-md-3 col-6">
                         <label class="small fw-bold">Bayar Margin (Rp)</label>
                         <input type="text" id="inputSisaMargin" class="form-control fw-bold text-primary" required>
                     </div>
-                    <div class="col-4">
+                    <div class="col-md-3 col-6">
                         <label class="small fw-bold text-danger">Bayar Denda (Rp)</label>
                         <input type="text" id="inputSisaDenda" class="form-control fw-bold text-danger" required>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label class="small fw-bold text-info" title="Sisa gaji di ATM Anggota">Sisa Gaji di ATM (Rp)</label>
+                        <input type="text" id="inputSisaGaji" class="form-control fw-bold text-info" placeholder="Opsional">
                     </div>
                 </div>
             </div>
@@ -731,6 +772,35 @@
         });
     });
 
+    const daftarBerkas = [
+        "1. KTP Pinjaman", "2. KTP Penanggung jawab", "3. KTP Saudara", "4. Kartu Keluarga", 
+        "5. Buku Tabungan", "6. Ijazah", "7. Kartu Jamsostek", "8. Akta Lahir", "9. Surat Kontrak", 
+        "10. Rekening Koran", "11. Buku Nikah", "12. ID Card", "13. Surat Pengangkatan"
+    ];
+
+    function renderBerkasTable(tbodyId) {
+        let html = '';
+        daftarBerkas.forEach((b, i) => {
+            html += `<tr>
+                <td class="text-center align-middle"><input class="form-check-input chk-berkas" type="checkbox" onchange="toggleBerkas(this)"></td>
+                <td class="align-middle fw-medium nama-berkas">${b}</td>
+                <td><select class="form-select form-select-sm sel-berkas" disabled><option value="Asli">Asli</option><option value="Fotocopy">Fotocopy</option></select></td>
+                <td><input type="text" class="form-control form-control-sm txt-berkas" placeholder="Keterangan..." disabled></td>
+            </tr>`;
+        });
+        const el = document.getElementById(tbodyId);
+        if(el) el.innerHTML = html;
+    }
+
+    function toggleBerkas(chk) {
+        const tr = chk.closest('tr');
+        const sel = tr.querySelector('.sel-berkas');
+        const txt = tr.querySelector('.txt-berkas');
+        sel.disabled = !chk.checked;
+        txt.disabled = !chk.checked;
+        if(!chk.checked) txt.value = '';
+    }
+
     // Fungsi untuk Load Data ke Tabel
     function loadData() {
         fetch('/api/identitas')
@@ -765,6 +835,9 @@
 
     // Panggil saat halaman pertama kali dimuat
     document.addEventListener('DOMContentLoaded', loadData);
+    document.addEventListener('DOMContentLoaded', () => {
+        renderBerkasTable('tbodyEditBerkasJaminan');
+    });
     
     // Fitur Live Search
     document.getElementById('searchInput').addEventListener('keyup', function() {
@@ -855,10 +928,10 @@
                 <td class="text-start fw-bold text-dark">Tagihan ke-${row.angsuran_ke} ${btnBayarSisa}</td>
                 <td class="text-end">0</td>
                 <td>0</td>
-                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tagDendaGross)}</td>
+                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tagDendaDb)}</td>
                 <td class="text-end text-success">0</td><td class="text-end text-success">0</td><td class="text-end text-success">0</td><td class="text-end text-success">0</td>
                 <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
-                <td class="text-end text-danger">${rpStr(tagPokok)}</td><td class="text-end text-danger">${rpStr(tagMargin)}</td><td class="text-end text-danger">${rpStr(tagDendaGross)}</td>
+                <td class="text-end text-danger">${rpStr(Number(row.tunggakan_pokok) || 0)}</td><td class="text-end text-danger">${rpStr(Number(row.tunggakan_margin) || 0)}</td><td class="text-end text-danger">${rpStr(Number(row.tunggakan_denda) || 0)}</td>
             </tr>`;
 
             // ROW 2: PEMBAYARAN
@@ -1036,10 +1109,10 @@
                 <td class="text-start fw-bold text-dark">Tagihan Jatuh Tempo ${btnBayarSisa}</td>
                 <td class="text-end">0</td>
                 <td>-</td>
-                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tagDendaGross)}</td>
+                <td class="text-end">${rpStr(tagPokok)}</td><td class="text-end">${rpStr(tagMargin)}</td><td class="text-end">${rpStr(tagDendaDb)}</td>
                 <td class="text-end text-success">0</td><td class="text-end text-success">0</td><td class="text-end text-success">0</td><td class="text-end text-success">0</td>
                 <td class="text-end fw-bold">${rpStr(currentBakiDebet)}</td>
-                <td class="text-end text-danger">${rpStr(tagPokok)}</td><td class="text-end text-danger">${rpStr(tagMargin)}</td><td class="text-end text-danger">${rpStr(tagDendaGross)}</td>
+                <td class="text-end text-danger">${rpStr(Number(row.tunggakan_pokok) || 0)}</td><td class="text-end text-danger">${rpStr(Number(row.tunggakan_margin) || 0)}</td><td class="text-end text-danger">${rpStr(Number(row.tunggakan_denda) || 0)}</td>
             </tr>`;
 
             // ROW 2: PEMBAYARAN
@@ -1149,6 +1222,7 @@
         myModal.show();
         document.getElementById('detailNamaAnggota').innerText = 'Memuat Data...';
         document.getElementById('btnCetakRekeningKoran').href = `/api/cetak_rekening_koran/${no_anggota}`;
+        document.getElementById('btnCetakSetoranBerkas').href = `/api/cetak_setoran_berkas/${no_anggota}`;
         
         fetch(`/api/anggota/${no_anggota}/detail`).then(res => res.json()).then(res => {
             if(res.status === 'success') {
@@ -1394,6 +1468,21 @@
                 form.kol.value = safeVal(d.kol);
                 form.kriteria.value = safeVal(d.kriteria);
                 if(form.marketing) form.marketing.value = safeVal(d.marketing);
+                
+                if(d.berkas_jaminan) {
+                    try {
+                        const bj = JSON.parse(d.berkas_jaminan);
+                        document.querySelectorAll('#tbodyEditBerkasJaminan tr').forEach(tr => {
+                            const nama = tr.querySelector('.nama-berkas').innerText;
+                            const found = bj.find(x => x.nama === nama);
+                            const chk = tr.querySelector('.chk-berkas'); const sel = tr.querySelector('.sel-berkas'); const txt = tr.querySelector('.txt-berkas');
+                            if(found) { chk.checked = true; sel.value = found.jenis; txt.value = found.keterangan; sel.disabled = false; txt.disabled = false; }
+                            else { chk.checked = false; sel.value = 'Asli'; txt.value = ''; sel.disabled = true; txt.disabled = true; }
+                        });
+                    } catch(e) {}
+                } else {
+                    document.querySelectorAll('#tbodyEditBerkasJaminan .chk-berkas').forEach(chk => { chk.checked = false; toggleBerkas(chk); });
+                }
             } else { alert("Gagal mengambil data: " + res.message); }
         });
     }
@@ -1404,6 +1493,14 @@
         const btnSubmit = document.getElementById('btnSubmitEdit');
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Menyimpan...';
+        
+        let editBerkasArr = [];
+        document.querySelectorAll('#tbodyEditBerkasJaminan tr').forEach(tr => {
+            if(tr.querySelector('.chk-berkas').checked) {
+                editBerkasArr.push({nama: tr.querySelector('.nama-berkas').innerText, jenis: tr.querySelector('.sel-berkas').value, keterangan: tr.querySelector('.txt-berkas').value});
+            }
+        });
+        document.getElementById('inputEditBerkasJaminan').value = JSON.stringify(editBerkasArr);
 
         const formData = new FormData(this);
         const fileInput = document.getElementById('editBerkasPdf');
@@ -1540,6 +1637,8 @@
         document.getElementById('inputSisaDenda').max = sisaDenda;
         document.getElementById('inputSisaDenda').min = 0;
         
+        document.getElementById('inputSisaGaji').value = '';
+
         // Memastikan denda tersinkronisasi jika tanggal berubah saat modal dibuka
         document.getElementById('tglBayarSisa').dispatchEvent(new Event('change'));
 
@@ -1589,23 +1688,28 @@
     });
 
     // VALIDASI INPUT MAKSIMAL PEMBAYARAN SISA SECARA REAL-TIME
-    ['inputSisaPokok', 'inputSisaMargin', 'inputSisaDenda'].forEach(id => {
-        document.getElementById(id).addEventListener('input', function() {
-            let rawVal = this.value.replace(/[^0-9,]/g, '');
-            if (rawVal) {
-                let parts = rawVal.split(',');
-                let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
-            }
+    ['inputSisaPokok', 'inputSisaMargin', 'inputSisaDenda', 'inputSisaGaji'].forEach(id => {
+        let el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', function() {
+                let rawVal = this.value.replace(/[^0-9,]/g, '');
+                if (rawVal) {
+                    let parts = rawVal.split(',');
+                    let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    this.value = parts.length > 1 ? intPart + ',' + parts[1] : intPart;
+                }
 
-            let max = parseFloat(this.max) || 0;
-            let val = parseFloat(rawVal.replace(/\./g, '').replace(/,/g, '.')) || 0;
-            if (val > max) {
-                this.value = Number(max).toLocaleString('id-ID');
-            } else if (val < 0) {
-                this.value = 0;
-            }
-        });
+                if (this.hasAttribute('max') && this.max !== "") {
+                    let max = parseFloat(this.max) || 0;
+                    let val = parseFloat(rawVal.replace(/\./g, '').replace(/,/g, '.')) || 0;
+                    if (val > max) {
+                        this.value = Number(max).toLocaleString('id-ID');
+                    } else if (val < 0) {
+                        this.value = 0;
+                    }
+                }
+            });
+        }
     });
 
     // FUNGSI SUBMIT BAYAR SISA
@@ -1627,6 +1731,7 @@
         let bPokok = getVal('inputSisaPokok');
         let bMargin = getVal('inputSisaMargin');
         let bDenda = getVal('inputSisaDenda');
+        let bSisaGaji = getVal('inputSisaGaji');
         let maxP = parseFloat(document.getElementById('inputSisaPokok').max) || 0;
         let maxM = parseFloat(document.getElementById('inputSisaMargin').max) || 0;
         let maxD = parseFloat(document.getElementById('inputSisaDenda').max) || 0;
@@ -1650,6 +1755,7 @@
             payload.nominal_pokok_utama = bPokok;
             payload.nominal_margin_utama = bMargin;
             payload.nominal_denda_utama = bDenda;
+            payload.sisa_gaji_utama = bSisaGaji;
             payload.angsuran_ke_utama = document.getElementById('sisa_angsuran_ke').value;
         } else {
             payload.bayar_urgent = true;
@@ -1657,6 +1763,7 @@
             payload.nominal_pokok_urgent = bPokok;
             payload.nominal_margin_urgent = bMargin;
             payload.nominal_denda_urgent = bDenda;
+            payload.sisa_gaji_urgent = bSisaGaji;
         }
 
         fetch('/api/bayar_angsuran', {
